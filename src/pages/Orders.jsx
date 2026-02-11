@@ -334,7 +334,7 @@ export const Orders = () => {
                                 )}
                               </div>
                               <div className="grid grid-cols-3 gap-2">
-                                <Input type="number" step="1" min="0" placeholder="Sasia" value={part.quantity} onChange={(e) => handlePartChange(si, pi, 'quantity', e.target.value)} />
+                                <Input type="number" step="any" min="0" placeholder="Sasia" value={part.quantity} onChange={(e) => handlePartChange(si, pi, 'quantity', e.target.value)} />
                                 <Input type="number" step="0.01" min="0" placeholder="Blerje €" value={part.buy_price} onChange={(e) => handlePartChange(si, pi, 'buy_price', e.target.value)} />
                                 <Input type="number" step="0.01" min="0" placeholder="Shitje €" value={part.sell_price} onChange={(e) => handlePartChange(si, pi, 'sell_price', e.target.value)} />
                               </div>
