@@ -13,7 +13,7 @@ const navigation = [
   { name: 'Punonjësit', to: '/employees', icon: UserCog },
   { name: 'Porositë', to: '/orders', icon: FileText },
   { name: 'Arkiva', to: '/archive', icon: Archive },
-  { name: 'Regjistri Ditor', to: '/logs', icon: ClipboardList },
+  { name: 'Raportet Ditore', to: '/logs', icon: ClipboardList },
   { name: 'Faturat', to: '/invoices', icon: Receipt },
 ]
 

@@ -45,7 +45,6 @@ export const Dashboard = () => {
   const paginatedOrders = paginate(filteredOrders, page)
 
   const isToday = dateFrom === todayISO() && dateTo === todayISO() && !showAll
-  const hasCustomFilter = !isToday && !showAll
 
   const handleShowAll = () => { setShowAll(true); setDateFrom(''); setDateTo('') }
   const handleResetToday = () => { setShowAll(false); setDateFrom(todayISO()); setDateTo(todayISO()) }
