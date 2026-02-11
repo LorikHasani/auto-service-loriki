@@ -151,13 +151,31 @@ export const printDailyReport = (orders, dateLabel) => {
   let orderRows = ''
   orders.forEach((order, idx) => {
     const total = calculateTotal(order)
-    const services = (order.order_items || []).map(i => i.service_name).join(', ')
+    const items = order.order_items || []
+    // Build compact service + parts detail
+    let servicesHtml = ''
+    items.forEach(item => {
+      servicesHtml += '<div style="margin-bottom:3px"><strong>' + item.service_name + '</strong>'
+      const parts = item.parts_json || []
+      if (parts.length > 0) {
+        const partNames = parts.filter(p => p.name).map(p => {
+          return p.name + (p.quantity > 1 ? ' (' + p.quantity + 'x)' : '')
+        })
+        if (partNames.length > 0) {
+          servicesHtml += '<span style="color:#888;font-size:10px;display:block;margin-left:6px">' + partNames.join(', ') + '</span>'
+        }
+      } else if (item.description) {
+        servicesHtml += '<span style="color:#888;font-size:10px;display:block;margin-left:6px">' + item.description + '</span>'
+      }
+      servicesHtml += '</div>'
+    })
     orderRows += '<tr>' +
       '<td>' + (idx + 1) + '</td>' +
       '<td><strong>#' + order.id + '</strong></td>' +
       '<td>' + (order.clients?.full_name || '') + '</td>' +
-      '<td>' + (order.cars?.make || '') + ' ' + (order.cars?.model || '') + '<br/><span style="font-size:12px;color:#888">' + (order.cars?.license_plate || '') + '</span></td>' +
-      '<td style="font-size:13px">' + services + '</td>' +
+      '<td>' + (order.cars?.make || '') + ' ' + (order.cars?.model || '') +
+        '<span style="font-size:11px;color:#888;display:block">' + (order.cars?.license_plate || '') + '</span></td>' +
+      '<td style="font-size:11px;color:#555;max-width:220px;line-height:1.3">' + servicesHtml + '</td>' +
       '<td style="text-align:right"><strong>' + formatCurrency(total) + '</strong></td>' +
       '<td style="text-align:center"><span class="status-badge ' + (order.is_paid ? 'status-paid' : 'status-unpaid') + '">' + (order.is_paid ? 'Paguar' : 'Pa paguar') + '</span></td>' +
       '</tr>'
