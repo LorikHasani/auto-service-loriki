@@ -6,6 +6,7 @@ import { Input, Select } from '../components/Input'
 import { Modal } from '../components/Modal'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
 import { Loading, EmptyState } from '../components/Loading'
+import { Pagination, paginate, usePagination } from '../components/Pagination'
 import { useOrders, useClients, useCars, useServices, useEmployees } from '../hooks/useData'
 import { formatCurrency, calculateOrderTotal, formatDate } from '../utils/helpers'
 import { printOrderDocument } from '../utils/printOrder'
@@ -33,6 +34,7 @@ export const Orders = () => {
   ])
   const [submitting, setSubmitting] = useState(false)
   const [archiving, setArchiving] = useState(false)
+  const [page, setPage] = useState(1)
 
   useEffect(() => {
     if (formData.client_id) {
@@ -190,6 +192,8 @@ export const Orders = () => {
 
   if (loading) return <Loading />
   const orderTotals = calculateOrderTotals()
+  const { totalPages } = usePagination(orders)
+  const paginatedOrders = paginate(orders, page)
 
   return (
     <div className="space-y-6">
@@ -209,6 +213,7 @@ export const Orders = () => {
           <EmptyState title="Nuk ka porosi aktive" description="Krijo porosinë e parë të servisit"
             action={<Button onClick={openCreateModal}><Plus className="w-5 h-5 mr-2" />Krijo Porosi</Button>} />
         ) : (
+          <>
           <Table>
             <TableHeader>
               <TableHeaderCell>ID</TableHeaderCell>
@@ -222,7 +227,7 @@ export const Orders = () => {
               <TableHeaderCell>Veprime</TableHeaderCell>
             </TableHeader>
             <TableBody>
-              {orders.map((order) => (
+              {paginatedOrders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell><span className="font-mono font-semibold">#{order.id}</span></TableCell>
                   <TableCell><span className="font-medium">{order.clients?.full_name}</span></TableCell>
@@ -259,6 +264,8 @@ export const Orders = () => {
               ))}
             </TableBody>
           </Table>
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={orders.length} />
+          </>
         )}
       </Card>
 

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Plus, Trash2, Edit2, Search } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -6,6 +6,7 @@ import { Input, Select } from '../components/Input'
 import { Modal } from '../components/Modal'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } from '../components/Table'
 import { Loading, EmptyState } from '../components/Loading'
+import { Pagination, paginate, usePagination } from '../components/Pagination'
 import { useCars, useClients } from '../hooks/useData'
 import { supabase } from '../services/supabase'
 
@@ -15,6 +16,7 @@ export const Vehicles = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCar, setEditingCar] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [page, setPage] = useState(1)
   const emptyForm = { client_id: '', make: '', model: '', year: new Date().getFullYear(), color: '', license_plate: '', vin: '' }
   const [formData, setFormData] = useState(emptyForm)
   const [submitting, setSubmitting] = useState(false)
@@ -22,44 +24,26 @@ export const Vehicles = () => {
   const filteredCars = useMemo(() => {
     if (!searchQuery.trim()) return cars
     const q = searchQuery.toLowerCase()
-    return cars.filter(car =>
-      (car.clients?.full_name || '').toLowerCase().includes(q) ||
-      (car.license_plate || '').toLowerCase().includes(q) ||
-      (car.vin || '').toLowerCase().includes(q)
-    )
+    return cars.filter(car => (car.clients?.full_name || '').toLowerCase().includes(q) || (car.license_plate || '').toLowerCase().includes(q) || (car.vin || '').toLowerCase().includes(q))
   }, [cars, searchQuery])
 
+  useEffect(() => { setPage(1) }, [searchQuery])
+
+  const { totalPages } = usePagination(filteredCars)
+  const paginatedCars = paginate(filteredCars, page)
+
   const handleOpenModal = (car = null) => {
-    if (car) {
-      setEditingCar(car)
-      setFormData({
-        client_id: car.client_id || '',
-        make: car.make || '',
-        model: car.model || '',
-        year: car.year || new Date().getFullYear(),
-        color: car.color || '',
-        license_plate: car.license_plate || '',
-        vin: car.vin || '',
-      })
-    } else {
-      setEditingCar(null)
-      setFormData(emptyForm)
-    }
+    if (car) { setEditingCar(car); setFormData({ client_id: car.client_id || '', make: car.make || '', model: car.model || '', year: car.year || new Date().getFullYear(), color: car.color || '', license_plate: car.license_plate || '', vin: car.vin || '' }) }
+    else { setEditingCar(null); setFormData(emptyForm) }
     setIsModalOpen(true)
   }
-
   const handleCloseModal = () => { setIsModalOpen(false); setEditingCar(null); setFormData(emptyForm) }
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setSubmitting(true)
     try {
-      if (editingCar) {
-        const { error } = await supabase.from('cars').update(formData).eq('id', editingCar.id)
-        if (error) throw error
-      } else {
-        const { error } = await supabase.from('cars').insert([formData])
-        if (error) throw error
-      }
+      if (editingCar) { const { error } = await supabase.from('cars').update(formData).eq('id', editingCar.id); if (error) throw error }
+      else { const { error } = await supabase.from('cars').insert([formData]); if (error) throw error }
       handleCloseModal(); refetch()
     } catch (error) { alert('Gabim: ' + error.message) }
     finally { setSubmitting(false) }
@@ -99,35 +83,38 @@ export const Vehicles = () => {
           <EmptyState title={searchQuery ? "Asnjë automjet nuk përputhet" : "Nuk ka automjete ende"} description={searchQuery ? "Provo një kërkim tjetër" : "Shto automjetin e parë"}
             action={!searchQuery && <Button onClick={() => handleOpenModal()}><Plus className="w-5 h-5 mr-2" /> Shto Automjetin e Parë</Button>} />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableHeaderCell>Klienti</TableHeaderCell>
-              <TableHeaderCell>Marka</TableHeaderCell>
-              <TableHeaderCell>Modeli</TableHeaderCell>
-              <TableHeaderCell>Viti</TableHeaderCell>
-              <TableHeaderCell>Targa</TableHeaderCell>
-              <TableHeaderCell>VIN</TableHeaderCell>
-              <TableHeaderCell>Veprime</TableHeaderCell>
-            </TableHeader>
-            <TableBody>
-              {filteredCars.map((car) => (
-                <TableRow key={car.id}>
-                  <TableCell><span className="font-medium">{car.clients?.full_name}</span></TableCell>
-                  <TableCell>{car.make}</TableCell>
-                  <TableCell>{car.model}</TableCell>
-                  <TableCell>{car.year}</TableCell>
-                  <TableCell><span className="font-mono font-medium">{car.license_plate}</span></TableCell>
-                  <TableCell><span className="text-gray-600 text-sm font-mono">{car.vin || 'N/A'}</span></TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="secondary" size="sm" onClick={() => handleOpenModal(car)} className="flex items-center gap-1"><Edit2 className="w-4 h-4" /></Button>
-                      <Button variant="danger" size="sm" onClick={() => handleDelete(car.id)}><Trash2 className="w-4 h-4" /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <>
+            <Table>
+              <TableHeader>
+                <TableHeaderCell>Klienti</TableHeaderCell>
+                <TableHeaderCell>Marka</TableHeaderCell>
+                <TableHeaderCell>Modeli</TableHeaderCell>
+                <TableHeaderCell>Viti</TableHeaderCell>
+                <TableHeaderCell>Targa</TableHeaderCell>
+                <TableHeaderCell>VIN</TableHeaderCell>
+                <TableHeaderCell>Veprime</TableHeaderCell>
+              </TableHeader>
+              <TableBody>
+                {paginatedCars.map((car) => (
+                  <TableRow key={car.id}>
+                    <TableCell><span className="font-medium">{car.clients?.full_name}</span></TableCell>
+                    <TableCell>{car.make}</TableCell>
+                    <TableCell>{car.model}</TableCell>
+                    <TableCell>{car.year}</TableCell>
+                    <TableCell><span className="font-mono font-medium">{car.license_plate}</span></TableCell>
+                    <TableCell><span className="text-gray-600 text-sm font-mono">{car.vin || 'N/A'}</span></TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="secondary" size="sm" onClick={() => handleOpenModal(car)}><Edit2 className="w-4 h-4" /></Button>
+                        <Button variant="danger" size="sm" onClick={() => handleDelete(car.id)}><Trash2 className="w-4 h-4" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={filteredCars.length} />
+          </>
         )}
       </Card>
 

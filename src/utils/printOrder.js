@@ -1,5 +1,12 @@
 import { formatCurrency, formatDate } from './helpers'
 
+export const COMPANY = {
+  name: 'AUTO SERVICE BASHKIMI',
+  slogan: 'CHIPTUNING',
+  address: 'Livoq i Poshtëm, Gjilan',
+  phone: '+383 44 955 389 / 044 577 311',
+}
+
 export const printOrderDocument = (order, { showPrices = true, showOrderNo = true } = {}) => {
   const items = order.order_items || []
   const total = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
@@ -12,37 +19,31 @@ export const printOrderDocument = (order, { showPrices = true, showOrderNo = tru
     const parts = item.parts_json || []
     const laborCost = parseFloat(item.labor_cost) || 0
 
-    // If there are stored parts, render each one as its own row
     if (parts.length > 0) {
-      // Labor row for this service (if labor > 0)
       if (laborCost > 0) {
         rowNum++
         productRows += '<tr>' +
           '<td>' + rowNum + '</td>' +
-          '<td><strong>' + item.service_name + '</strong> — Puna</td>' +
+          '<td><strong>' + item.service_name + '</strong> \u2014 Puna</td>' +
           '<td style="text-align:center">1</td>' +
           (showPrices ? '<td style="text-align:right">' + formatCurrency(laborCost) + '</td>' +
             '<td style="text-align:right"><strong>' + formatCurrency(laborCost) + '</strong></td>' : '') +
           '</tr>'
       }
-
-      // Individual part rows
       parts.forEach(part => {
         if (!part.name) return
         rowNum++
         const qty = parseFloat(part.quantity) || 1
         const price = parseFloat(part.sell_price) || 0
-        const lineTotal = qty * price
         productRows += '<tr>' +
           '<td>' + rowNum + '</td>' +
           '<td>' + part.name + '</td>' +
           '<td style="text-align:center">' + qty + '</td>' +
           (showPrices ? '<td style="text-align:right">' + formatCurrency(price) + '</td>' +
-            '<td style="text-align:right"><strong>' + formatCurrency(lineTotal) + '</strong></td>' : '') +
+            '<td style="text-align:right"><strong>' + formatCurrency(qty * price) + '</strong></td>' : '') +
           '</tr>'
       })
     } else {
-      // Fallback: no parts_json stored, show as single row (legacy orders)
       rowNum++
       productRows += '<tr>' +
         '<td>' + rowNum + '</td>' +
@@ -59,13 +60,14 @@ export const printOrderDocument = (order, { showPrices = true, showOrderNo = tru
   const todayStr = formatDate(new Date())
 
   const pw = window.open('', '', 'height=700,width=800')
-  pw.document.write(`<html><head><title>${showOrderNo ? 'Porosi #' + order.id : 'Raport Shërbimi'}</title>
+  pw.document.write(`<html><head><title>${showOrderNo ? 'Porosi #' + order.id : 'Raport Sh\u00EBrbimi'}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',Arial,sans-serif;padding:40px;color:#1a1a2e;line-height:1.6}
-.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:24px;border-bottom:3px solid #FF6B35}
-.company{font-size:26px;font-weight:800;color:#FF6B35;letter-spacing:2px}
-.company-sub{font-size:13px;color:#666;margin-top:4px;font-style:italic;letter-spacing:1px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid #FF6B35}
+.company{font-size:24px;font-weight:800;color:#FF6B35;letter-spacing:2px}
+.company-slogan{font-size:14px;color:#1a1a2e;margin-top:4px;font-weight:700;letter-spacing:3px}
+.company-info{font-size:12px;color:#666;margin-top:6px;line-height:1.5}
 .invoice-title{text-align:right}
 .invoice-title h2{font-size:24px;color:#1a1a2e;margin-bottom:8px}
 .invoice-title p{color:#666;font-size:14px}
@@ -91,11 +93,15 @@ tr:last-child td{border-bottom:none}
 
 <div class="header">
   <div>
-    <div class="company">AUTO SERVICE BASHKIMI</div>
-    <div class="company-sub">chiptuning</div>
+    <div class="company">${COMPANY.name}</div>
+    <div class="company-slogan">${COMPANY.slogan}</div>
+    <div class="company-info">
+      ${COMPANY.address}<br/>
+      Tel: ${COMPANY.phone}
+    </div>
   </div>
   <div class="invoice-title">
-    ${showOrderNo ? '<h2>POROSI</h2><p>#' + order.id + '</p>' : '<h2>RAPORT SHËRBIMI</h2>'}
+    ${showOrderNo ? '<h2>POROSI</h2><p>#' + order.id + '</p>' : '<h2>RAPORT SH\u00CBRBIMI</h2>'}
     <p>${formatDate(order.created_at)}</p>
   </div>
 </div>
@@ -122,9 +128,9 @@ tr:last-child td{border-bottom:none}
   <thead>
     <tr>
       <th style="width:40px">#</th>
-      <th>Produkti / Shërbimi</th>
+      <th>Produkti / Sh\u00EBrbimi</th>
       <th style="text-align:center">Sasia</th>
-      ${showPrices ? '<th style="text-align:right">Çmimi</th><th style="text-align:right">Totali</th>' : ''}
+      ${showPrices ? '<th style="text-align:right">\u00C7mimi</th><th style="text-align:right">Totali</th>' : ''}
     </tr>
   </thead>
   <tbody>
@@ -140,14 +146,15 @@ ${showPrices ? `
   </div>
   <div style="text-align:right;margin-top:12px">
     <span class="status-badge ${order.is_paid ? 'status-paid' : 'status-unpaid'}">
-      ${order.is_paid ? '✓ PAGUAR' : 'PA PAGUAR'}
+      ${order.is_paid ? '\u2713 PAGUAR' : 'PA PAGUAR'}
     </span>
   </div>
 </div>
 ` : ''}
 
 <div class="footer">
-  <p>Faleminderit që zgjedhët Auto Service Bashkimi!</p>
+  <p>Faleminderit q\u00EB zgjedh\u00EBt ${COMPANY.name}!</p>
+  <p style="font-size:11px;margin-top:4px">${COMPANY.address} | Tel: ${COMPANY.phone}</p>
 </div>
 </body></html>`)
   pw.document.close()

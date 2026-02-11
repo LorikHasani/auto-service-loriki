@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Plus, Trash2, Printer, Search, X } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -6,6 +6,7 @@ import { Input, TextArea } from '../components/Input'
 import { Modal } from '../components/Modal'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
 import { Loading, EmptyState } from '../components/Loading'
+import { Pagination, paginate, usePagination } from '../components/Pagination'
 import { useLogs, useOrders } from '../hooks/useData'
 import { formatDate, formatCurrency, calculateOrderTotal } from '../utils/helpers'
 import { printOrderDocument } from '../utils/printOrder'
@@ -18,6 +19,10 @@ export const Logs = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [formData, setFormData] = useState({ log_date: new Date().toISOString().split('T')[0], description: '' })
   const [submitting, setSubmitting] = useState(false)
+  const [page, setPage] = useState(1)
+
+  const { totalPages } = usePagination(logs)
+  const paginatedLogs = paginate(logs, page)
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setSubmitting(true)
@@ -50,24 +55,27 @@ export const Logs = () => {
           <EmptyState title="Nuk ka regjistrime ende" description="Fillo duke regjistruar aktivitetet ditore"
             action={<Button onClick={() => setIsModalOpen(true)}><Plus className="w-5 h-5 mr-2" />Shto Regjistrimin e Parë</Button>} />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableHeaderCell>Data</TableHeaderCell>
-              <TableHeaderCell>Përshkrimi</TableHeaderCell>
-              <TableHeaderCell>Stafi</TableHeaderCell>
-              <TableHeaderCell>Veprime</TableHeaderCell>
-            </TableHeader>
-            <TableBody>
-              {logs.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell><span className="font-medium">{formatDate(log.log_date)}</span></TableCell>
-                  <TableCell>{log.description}</TableCell>
-                  <TableCell><span className="text-sm text-gray-600">{log.staff_email}</span></TableCell>
-                  <TableCell><Button variant="danger" size="sm" onClick={() => handleDelete(log.id)}><Trash2 className="w-4 h-4" /></Button></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <>
+            <Table>
+              <TableHeader>
+                <TableHeaderCell>Data</TableHeaderCell>
+                <TableHeaderCell>Përshkrimi</TableHeaderCell>
+                <TableHeaderCell>Stafi</TableHeaderCell>
+                <TableHeaderCell>Veprime</TableHeaderCell>
+              </TableHeader>
+              <TableBody>
+                {paginatedLogs.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell><span className="font-medium">{formatDate(log.log_date)}</span></TableCell>
+                    <TableCell>{log.description}</TableCell>
+                    <TableCell><span className="text-sm text-gray-600">{log.staff_email}</span></TableCell>
+                    <TableCell><Button variant="danger" size="sm" onClick={() => handleDelete(log.id)}><Trash2 className="w-4 h-4" /></Button></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={logs.length} />
+          </>
         )}
       </Card>
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Shto Regjistrim Ditor">
@@ -89,6 +97,7 @@ export const Invoices = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [page, setPage] = useState(1)
 
   const filteredOrders = useMemo(() => {
     let result = orders
@@ -100,6 +109,11 @@ export const Invoices = () => {
     if (dateTo) { const t = new Date(dateTo); t.setHours(23,59,59,999); result = result.filter(o => new Date(o.created_at) <= t) }
     return result
   }, [orders, searchQuery, dateFrom, dateTo])
+
+  useEffect(() => { setPage(1) }, [searchQuery, dateFrom, dateTo])
+
+  const { totalPages } = usePagination(filteredOrders)
+  const paginatedOrders = paginate(filteredOrders, page)
 
   const clearFilters = () => { setSearchQuery(''); setDateFrom(''); setDateTo('') }
   const hasFilters = searchQuery || dateFrom || dateTo
@@ -144,43 +158,46 @@ export const Invoices = () => {
         {filteredOrders.length === 0 ? (
           <EmptyState title={hasFilters ? "Asnjë faturë nuk përputhet" : "Nuk ka fatura ende"} description={hasFilters ? "Provo të ndryshosh kërkimin ose datën" : "Faturat krijohen nga porositë"} />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableHeaderCell>Fatura #</TableHeaderCell>
-              <TableHeaderCell>Klienti</TableHeaderCell>
-              <TableHeaderCell>Automjeti</TableHeaderCell>
-              <TableHeaderCell>VIN</TableHeaderCell>
-              <TableHeaderCell>Data</TableHeaderCell>
-              <TableHeaderCell>Shuma</TableHeaderCell>
-              <TableHeaderCell>Statusi</TableHeaderCell>
-              <TableHeaderCell>Veprime</TableHeaderCell>
-            </TableHeader>
-            <TableBody>
-              {filteredOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell><span className="font-mono font-semibold text-primary-500">FAT-{order.id}</span></TableCell>
-                  <TableCell><span className="font-medium">{order.clients?.full_name}</span></TableCell>
-                  <TableCell>
-                    <span className="text-sm">{order.cars?.make} {order.cars?.model}<span className="block text-xs text-gray-500">{order.cars?.license_plate}</span></span>
-                  </TableCell>
-                  <TableCell><span className="text-xs font-mono text-gray-500">{order.cars?.vin || '\u2014'}</span></TableCell>
-                  <TableCell><span className="text-sm text-gray-600">{formatDate(order.created_at)}</span></TableCell>
-                  <TableCell><span className="font-semibold">{formatCurrency(calculateOrderTotal(order))}</span></TableCell>
-                  <TableCell><Badge variant={order.is_paid ? 'success' : 'danger'}>{order.is_paid ? 'Paguar' : 'Pa paguar'}</Badge></TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="secondary" onClick={() => printOrderDocument(order, { showPrices: true, showOrderNo: true })} title="Printo me çmime">
-                        <Printer className="w-4 h-4 mr-1" /> Faturë
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => printOrderDocument(order, { showPrices: false, showOrderNo: false })} title="Printo pa çmime">
-                        <Printer className="w-4 h-4 mr-1" /> Raport
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <>
+            <Table>
+              <TableHeader>
+                <TableHeaderCell>Fatura #</TableHeaderCell>
+                <TableHeaderCell>Klienti</TableHeaderCell>
+                <TableHeaderCell>Automjeti</TableHeaderCell>
+                <TableHeaderCell>VIN</TableHeaderCell>
+                <TableHeaderCell>Data</TableHeaderCell>
+                <TableHeaderCell>Shuma</TableHeaderCell>
+                <TableHeaderCell>Statusi</TableHeaderCell>
+                <TableHeaderCell>Veprime</TableHeaderCell>
+              </TableHeader>
+              <TableBody>
+                {paginatedOrders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell><span className="font-mono font-semibold text-primary-500">FAT-{order.id}</span></TableCell>
+                    <TableCell><span className="font-medium">{order.clients?.full_name}</span></TableCell>
+                    <TableCell>
+                      <span className="text-sm">{order.cars?.make} {order.cars?.model}<span className="block text-xs text-gray-500">{order.cars?.license_plate}</span></span>
+                    </TableCell>
+                    <TableCell><span className="text-xs font-mono text-gray-500">{order.cars?.vin || '\u2014'}</span></TableCell>
+                    <TableCell><span className="text-sm text-gray-600">{formatDate(order.created_at)}</span></TableCell>
+                    <TableCell><span className="font-semibold">{formatCurrency(calculateOrderTotal(order))}</span></TableCell>
+                    <TableCell><Badge variant={order.is_paid ? 'success' : 'danger'}>{order.is_paid ? 'Paguar' : 'Pa paguar'}</Badge></TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => printOrderDocument(order, { showPrices: true, showOrderNo: true })} title="Printo me çmime">
+                          <Printer className="w-4 h-4 mr-1" /> Faturë
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => printOrderDocument(order, { showPrices: false, showOrderNo: false })} title="Printo pa çmime">
+                          <Printer className="w-4 h-4 mr-1" /> Raport
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={filteredOrders.length} />
+          </>
         )}
       </Card>
     </div>

@@ -1,27 +1,36 @@
-import { useState, useMemo } from 'react'
-import { Plus, Trash2, Edit2, Search } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Plus, Trash2, Edit2, Search, Eye } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { Modal } from '../components/Modal'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } from '../components/Table'
 import { Loading, EmptyState } from '../components/Loading'
+import { Pagination, paginate, usePagination } from '../components/Pagination'
 import { useClients } from '../hooks/useData'
 import { supabase } from '../services/supabase'
 
 export const Clients = () => {
   const { clients, loading, refetch } = useClients()
+  const navigate = useNavigate()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingClient, setEditingClient] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [formData, setFormData] = useState({ full_name: '', phone: '', email: '', address: '' })
   const [submitting, setSubmitting] = useState(false)
+  const [page, setPage] = useState(1)
 
   const filteredClients = useMemo(() => {
     if (!searchQuery.trim()) return clients
     const q = searchQuery.toLowerCase()
     return clients.filter(c => (c.full_name || '').toLowerCase().includes(q) || (c.phone || '').toLowerCase().includes(q))
   }, [clients, searchQuery])
+
+  useEffect(() => { setPage(1) }, [searchQuery])
+
+  const { totalPages } = usePagination(filteredClients)
+  const paginatedClients = paginate(filteredClients, page)
 
   const handleOpenModal = (client = null) => {
     if (client) { setEditingClient(client); setFormData({ full_name: client.full_name || '', phone: client.phone || '', email: client.email || '', address: client.address || '' }) }
@@ -74,31 +83,35 @@ export const Clients = () => {
           <EmptyState title={searchQuery ? "Asnjë klient nuk përputhet" : "Nuk ka klientë ende"} description={searchQuery ? "Provo një kërkim tjetër" : "Fillo duke shtuar klientin e parë"}
             action={!searchQuery && <Button onClick={() => handleOpenModal()} className="flex items-center gap-2"><Plus className="w-5 h-5" /> Shto Klientin e Parë</Button>} />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableHeaderCell>Emri</TableHeaderCell>
-              <TableHeaderCell>Telefoni</TableHeaderCell>
-              <TableHeaderCell>Email</TableHeaderCell>
-              <TableHeaderCell>Adresa</TableHeaderCell>
-              <TableHeaderCell>Veprime</TableHeaderCell>
-            </TableHeader>
-            <TableBody>
-              {filteredClients.map((client) => (
-                <TableRow key={client.id}>
-                  <TableCell><span className="font-medium text-dark-500">{client.full_name}</span></TableCell>
-                  <TableCell>{client.phone}</TableCell>
-                  <TableCell>{client.email}</TableCell>
-                  <TableCell><span className="text-gray-600">{client.address || 'N/A'}</span></TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="secondary" size="sm" onClick={() => handleOpenModal(client)} className="flex items-center gap-1"><Edit2 className="w-4 h-4" /> Ndrysho</Button>
-                      <Button variant="danger" size="sm" onClick={() => handleDelete(client.id)}><Trash2 className="w-4 h-4" /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <>
+            <Table>
+              <TableHeader>
+                <TableHeaderCell>Emri</TableHeaderCell>
+                <TableHeaderCell>Telefoni</TableHeaderCell>
+                <TableHeaderCell>Email</TableHeaderCell>
+                <TableHeaderCell>Adresa</TableHeaderCell>
+                <TableHeaderCell>Veprime</TableHeaderCell>
+              </TableHeader>
+              <TableBody>
+                {paginatedClients.map((client) => (
+                  <TableRow key={client.id}>
+                    <TableCell><span className="font-medium text-dark-500">{client.full_name}</span></TableCell>
+                    <TableCell>{client.phone}</TableCell>
+                    <TableCell>{client.email}</TableCell>
+                    <TableCell><span className="text-gray-600">{client.address || 'N/A'}</span></TableCell>
+                    <TableCell>
+                      <div className="flex gap-1.5">
+                        <Button variant="primary" size="sm" onClick={() => navigate('/clients/' + client.id)} className="flex items-center gap-1"><Eye className="w-4 h-4" /> Shiko</Button>
+                        <Button variant="secondary" size="sm" onClick={() => handleOpenModal(client)}><Edit2 className="w-4 h-4" /></Button>
+                        <Button variant="danger" size="sm" onClick={() => handleDelete(client.id)}><Trash2 className="w-4 h-4" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={filteredClients.length} />
+          </>
         )}
       </Card>
 

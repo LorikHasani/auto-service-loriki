@@ -29,8 +29,10 @@ export const Login = () => {
               <Gauge className="w-7 h-7 text-white" />
             </div>
             <h1 className="text-2xl font-display text-dark-500 tracking-wider mb-1">AUTO SERVICE BASHKIMI</h1>
-            <p className="text-sm text-primary-400 italic">chiptuning</p>
-            <p className="text-xs text-gray-400 mt-2">Hyni në llogarinë tuaj</p>
+            <p className="text-sm text-primary-400 font-bold tracking-[3px]">CHIPTUNING</p>
+            <p className="text-xs text-gray-400 mt-3">Livoq i Poshtëm, Gjilan</p>
+            <p className="text-xs text-gray-400">+383 44 955 389 / 044 577 311</p>
+            <p className="text-xs text-gray-500 mt-3">Hyni në llogarinë tuaj</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="stafi@example.com" required />
@@ -38,7 +40,6 @@ export const Login = () => {
             {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
             <Button type="submit" className="w-full" size="lg" disabled={loading}>{loading ? 'Duke hyrë...' : 'Hyr'}</Button>
           </form>
-          <div className="mt-6 text-center text-xs text-gray-400"><p>Kredencialet demo janë në README</p></div>
         </div>
       </div>
     </div>

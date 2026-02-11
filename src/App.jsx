@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { Login } from './pages/Login'
 import { Dashboard } from './pages/Dashboard'
 import { Clients } from './pages/Clients'
+import { ClientDetail } from './pages/ClientDetail'
 import { Vehicles } from './pages/Vehicles'
 import { Services } from './pages/Services'
 import { Orders } from './pages/Orders'
@@ -68,6 +69,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AppLayout>
               <Clients />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/clients/:id"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <ClientDetail />
             </AppLayout>
           </ProtectedRoute>
         }

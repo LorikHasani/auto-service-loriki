@@ -32,8 +32,8 @@ export const Sidebar = () => {
             <Gauge className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-[15px] font-display tracking-wider text-white leading-none">AUTO SERVICE</h1>
-            <p className="text-[10px] text-primary-400 tracking-widest uppercase mt-0.5">BASHKIMI</p>
+            <h1 className="text-[14px] font-display tracking-wider text-white leading-tight">AUTO SERVICE<br/>BASHKIMI</h1>
+            <p className="text-[9px] text-primary-400 tracking-[3px] uppercase mt-0.5">CHIPTUNING</p>
           </div>
         </div>
       </div>
@@ -43,6 +43,7 @@ export const Sidebar = () => {
           <NavLink
             key={item.name}
             to={item.to}
+            end={item.to === '/'}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 text-[14px] ${
                 isActive

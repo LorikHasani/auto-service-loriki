@@ -22,7 +22,13 @@ CREATE TABLE IF NOT EXISTS employees (
 -- Enable RLS on employees
 ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
 
--- Employees policies
+-- Drop existing policies first (safe to run even if they don't exist)
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON employees;
+DROP POLICY IF EXISTS "Enable insert for authenticated users" ON employees;
+DROP POLICY IF EXISTS "Enable update for authenticated users" ON employees;
+DROP POLICY IF EXISTS "Enable delete for authenticated users" ON employees;
+
+-- Recreate policies
 CREATE POLICY "Enable read access for authenticated users" ON employees
     FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Enable insert for authenticated users" ON employees
