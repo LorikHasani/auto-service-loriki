@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Car, Phone, Mail, MapPin, Printer, Calendar } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
+import { Modal } from '../components/Modal'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
 import { Loading, EmptyState } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
@@ -19,6 +20,12 @@ export const ClientDetail = () => {
   const [loading, setLoading] = useState(true)
   const [selectedCarId, setSelectedCarId] = useState('all')
   const [page, setPage] = useState(1)
+
+  // Print modal state
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
+  const [printOrderData, setPrintOrderData] = useState(null)
+  const [printShowPrices, setPrintShowPrices] = useState(true)
+  const [printShowOrderNo, setPrintShowOrderNo] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -59,6 +66,19 @@ export const ClientDetail = () => {
   const totalOrders = filteredOrders.length
   const paidOrders = filteredOrders.filter(o => o.is_paid).length
   const unpaidOrders = filteredOrders.filter(o => !o.is_paid).length
+
+  const openPrintModal = (order) => {
+    setPrintOrderData(order)
+    setPrintShowPrices(true)
+    setPrintShowOrderNo(true)
+    setIsPrintModalOpen(true)
+  }
+
+  const executePrint = () => {
+    if (!printOrderData) return
+    printOrderDocument(printOrderData, { showPrices: printShowPrices, showOrderNo: printShowOrderNo })
+    setIsPrintModalOpen(false)
+  }
 
   if (loading) return <Loading />
   if (!client) return null
@@ -170,7 +190,11 @@ export const ClientDetail = () => {
                     <TableCell><span className="font-semibold">{formatCurrency(calculateOrderTotal(order))}</span></TableCell>
                     <TableCell><Badge variant={order.is_paid ? 'success' : 'danger'}>{order.is_paid ? 'Paguar' : 'Pa paguar'}</Badge></TableCell>
                     <TableCell><div className="flex items-center gap-1.5 text-sm text-gray-600"><Calendar className="w-3.5 h-3.5" />{formatDate(order.created_at)}</div></TableCell>
-                    <TableCell><Button size="sm" variant="outline" onClick={() => printOrderDocument(order, { showPrices: true, showOrderNo: true })}><Printer className="w-4 h-4" /></Button></TableCell>
+                    <TableCell>
+                      <Button size="sm" variant="secondary" onClick={() => openPrintModal(order)}>
+                        <Printer className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -179,6 +203,35 @@ export const ClientDetail = () => {
           </>
         )}
       </Card>
+
+      {/* Print Modal with Options */}
+      <Modal isOpen={isPrintModalOpen} onClose={() => setIsPrintModalOpen(false)} title="Opsionet e Printimit" size="sm">
+        <div className="space-y-5">
+          {printOrderData && (
+            <div className="bg-gray-50 rounded-lg p-4 text-sm">
+              <p><strong>Porosi:</strong> #{printOrderData.id}</p>
+              <p><strong>Klienti:</strong> {printOrderData.clients?.full_name}</p>
+              <p><strong>Automjeti:</strong> {printOrderData.cars?.make} {printOrderData.cars?.model}</p>
+            </div>
+          )}
+          <div className="space-y-3">
+            <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+              <input type="checkbox" checked={printShowPrices} onChange={(e) => setPrintShowPrices(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-primary-400 focus:ring-primary-400" />
+              <div><span className="font-medium text-sm">Shfaq çmimet</span><p className="text-xs text-gray-500">Çmimi, sasia dhe totali</p></div>
+            </label>
+            <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+              <input type="checkbox" checked={printShowOrderNo} onChange={(e) => setPrintShowOrderNo(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-primary-400 focus:ring-primary-400" />
+              <div><span className="font-medium text-sm">Shfaq numrin e porosisë</span><p className="text-xs text-gray-500">Numri # i porosisë në krye</p></div>
+            </label>
+          </div>
+          <div className="flex gap-3 justify-end pt-3 border-t">
+            <Button variant="outline" onClick={() => setIsPrintModalOpen(false)}>Anulo</Button>
+            <Button onClick={executePrint} className="flex items-center gap-2"><Printer className="w-4 h-4" /> Printo</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

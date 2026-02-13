@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Plus, Printer, CheckCircle, XCircle, Trash2, Archive, X, Edit2 } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -12,12 +12,18 @@ import { formatCurrency, calculateOrderTotal, formatDate } from '../utils/helper
 import { printOrderDocument } from '../utils/printOrder'
 import { supabase } from '../services/supabase'
 
+const getLocalDate = (timestamp) => {
+  const d = new Date(timestamp)
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+}
+
 export const Orders = () => {
   const { orders, loading, refetch } = useOrders(false)
   const { clients } = useClients()
   const { cars } = useCars()
   const { services } = useServices()
   const { employees } = useEmployees()
+  const autoArchiveRan = useRef(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
@@ -35,6 +41,31 @@ export const Orders = () => {
   const [submitting, setSubmitting] = useState(false)
   const [archiving, setArchiving] = useState(false)
   const [page, setPage] = useState(1)
+
+  // Auto-archive orders from previous days
+  useEffect(() => {
+    if (loading || autoArchiveRan.current || !orders.length) return
+    autoArchiveRan.current = true
+
+    const today = getLocalDate(new Date())
+    const oldOrders = orders.filter(o => getLocalDate(o.created_at) < today && !o.is_archived)
+    if (oldOrders.length === 0) return
+
+    const archiveOld = async () => {
+      try {
+        const ids = oldOrders.map(o => o.id)
+        const { error } = await supabase
+          .from('orders')
+          .update({ is_archived: true, archived_at: new Date().toISOString() })
+          .in('id', ids)
+        if (error) throw error
+        refetch()
+      } catch (err) {
+        console.error('Auto-archive failed:', err)
+      }
+    }
+    archiveOld()
+  }, [loading, orders, refetch])
 
   useEffect(() => {
     if (formData.client_id) {
@@ -334,7 +365,7 @@ export const Orders = () => {
                                 )}
                               </div>
                               <div className="grid grid-cols-3 gap-2">
-                                <Input type="number" step="1" min="0" placeholder="Sasia" value={part.quantity} onChange={(e) => handlePartChange(si, pi, 'quantity', e.target.value)} />
+                                <Input type="number" step="any" min="0" placeholder="Sasia" value={part.quantity} onChange={(e) => handlePartChange(si, pi, 'quantity', e.target.value)} />
                                 <Input type="number" step="0.01" min="0" placeholder="Blerje €" value={part.buy_price} onChange={(e) => handlePartChange(si, pi, 'buy_price', e.target.value)} />
                                 <Input type="number" step="0.01" min="0" placeholder="Shitje €" value={part.sell_price} onChange={(e) => handlePartChange(si, pi, 'sell_price', e.target.value)} />
                               </div>

@@ -1,99 +1,192 @@
-import { useState, useMemo, useEffect } from 'react'
-import { Plus, Trash2, Printer, Search, X } from 'lucide-react'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { Printer, Search, X, Calendar } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
-import { Input, TextArea } from '../components/Input'
-import { Modal } from '../components/Modal'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
 import { Loading, EmptyState } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
 import { useLogs, useOrders } from '../hooks/useData'
 import { formatDate, formatCurrency, calculateOrderTotal } from '../utils/helpers'
-import { printOrderDocument } from '../utils/printOrder'
+import { printOrderDocument, printDailyReport } from '../utils/printOrder'
 import { supabase } from '../services/supabase'
 import { useAuth } from '../context/AuthContext'
 
+const getLocalDate = (timestamp) => {
+  const d = new Date(timestamp)
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+}
+
+const DAYS_SQ = ['E Diel', 'E Hënë', 'E Martë', 'E Mërkurë', 'E Enjte', 'E Premte', 'E Shtunë']
+const AUTO_TAG = '[RAPORT-AUTO]'
+
+const todayISO = () => {
+  const d = new Date()
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+}
+
 export const Logs = () => {
-  const { logs, loading, refetch } = useLogs()
+  const { orders, loading: ordersLoading } = useOrders(true)
+  const { logs, loading: logsLoading, refetch: refetchLogs } = useLogs()
   const { user } = useAuth()
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [formData, setFormData] = useState({ log_date: new Date().toISOString().split('T')[0], description: '' })
-  const [submitting, setSubmitting] = useState(false)
+  const autoSaveRan = useRef(false)
   const [page, setPage] = useState(1)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
-  const { totalPages } = usePagination(logs)
-  const paginatedLogs = paginate(logs, page)
+  // Auto-save missing past-day reports
+  useEffect(() => {
+    if (ordersLoading || logsLoading || autoSaveRan.current || !orders.length) return
+    autoSaveRan.current = true
 
-  const handleSubmit = async (e) => {
-    e.preventDefault(); setSubmitting(true)
-    try {
-      const { error } = await supabase.from('daily_logs').insert([{ ...formData, staff_email: user.email }])
-      if (error) throw error; setIsModalOpen(false); setFormData({ log_date: new Date().toISOString().split('T')[0], description: '' }); refetch()
-    } catch (error) { alert('Gabim: ' + error.message) }
-    finally { setSubmitting(false) }
+    const saveMissing = async () => {
+      // Get all dates that have orders (except today)
+      const today = todayISO()
+      const ordersByDate = {}
+      orders.forEach(o => {
+        const d = getLocalDate(o.created_at)
+        if (d < today) {
+          if (!ordersByDate[d]) ordersByDate[d] = []
+          ordersByDate[d].push(o)
+        }
+      })
+
+      // Get dates that already have auto-reports
+      const savedDates = new Set(
+        logs.filter(l => l.description && l.description.startsWith(AUTO_TAG)).map(l => l.log_date)
+      )
+
+      // Save missing
+      const toInsert = []
+      for (const [dateStr, dayOrders] of Object.entries(ordersByDate)) {
+        if (savedDates.has(dateStr)) continue
+        const rev = dayOrders.reduce((s, o) => s + (o.order_items || []).reduce((ss, i) => ss + (i.quantity * i.unit_price), 0), 0)
+        const cogs = dayOrders.reduce((s, o) => s + (o.order_items || []).reduce((ss, i) => ss + (parseFloat(i.parts_cost) || 0), 0), 0)
+        const paid = dayOrders.filter(o => o.is_paid).length
+        toInsert.push({
+          log_date: dateStr,
+          description: `${AUTO_TAG} Porosi: ${dayOrders.length} | Paguar: ${paid}/${dayOrders.length} | Të ardhura: ${formatCurrency(rev)} | Fitimi: ${formatCurrency(rev - cogs)}`,
+          staff_email: user?.email || 'system'
+        })
+      }
+
+      if (toInsert.length > 0) {
+        await supabase.from('daily_logs').insert(toInsert)
+        refetchLogs()
+      }
+    }
+    saveMissing()
+  }, [ordersLoading, logsLoading, orders, logs, user, refetchLogs])
+
+  // Build report list from saved logs (auto-tagged)
+  const reports = useMemo(() => {
+    return logs
+      .filter(l => l.description && l.description.startsWith(AUTO_TAG))
+      .map(l => {
+        const dateObj = new Date(l.log_date + 'T12:00:00')
+        return {
+          id: l.id,
+          date: l.log_date,
+          dateObj,
+          dayName: DAYS_SQ[dateObj.getDay()],
+          summary: l.description.replace(AUTO_TAG + ' ', '')
+        }
+      })
+      .sort((a, b) => b.date.localeCompare(a.date))
+  }, [logs])
+
+  const filteredReports = useMemo(() => {
+    let result = reports
+    if (dateFrom) result = result.filter(r => r.date >= dateFrom)
+    if (dateTo) result = result.filter(r => r.date <= dateTo)
+    return result
+  }, [reports, dateFrom, dateTo])
+
+  useEffect(() => { setPage(1) }, [dateFrom, dateTo])
+
+  const { totalPages } = usePagination(filteredReports)
+  const paginatedReports = paginate(filteredReports, page)
+
+  const hasFilters = dateFrom || dateTo
+  const clearFilters = () => { setDateFrom(''); setDateTo('') }
+
+  const handlePrint = (report) => {
+    const dayOrders = orders.filter(o => getLocalDate(o.created_at) === report.date)
+    printDailyReport(dayOrders, report.dayName + ' — ' + formatDate(report.dateObj))
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('Fshi këtë regjistrim?')) return
-    try { const { error } = await supabase.from('daily_logs').delete().eq('id', id); if (error) throw error; refetch() }
-    catch (error) { alert('Gabim: ' + error.message) }
-  }
-
-  if (loading) return <Loading />
+  if (ordersLoading || logsLoading) return <Loading />
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-display text-dark-500 mb-2">Regjistri Ditor</h1>
-          <p className="text-gray-600">Regjistro aktivitetet ditore operacionale</p>
-        </div>
-        <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2"><Plus className="w-5 h-5" /> Shto Regjistrim</Button>
+      <div>
+        <h1 className="text-4xl font-display text-dark-500 mb-2">Raportet Ditore</h1>
+        <p className="text-gray-600">Raportet ruhen automatikisht për çdo ditë me porosi</p>
       </div>
+
+      <Card className="!p-4">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="flex items-center gap-2 text-sm font-medium text-gray-600"><Calendar className="w-4 h-4" /> Filtro sipas datës:</div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Nga</label>
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Deri</label>
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all text-sm" />
+          </div>
+          {hasFilters && (
+            <Button variant="outline" size="sm" onClick={clearFilters} className="flex items-center gap-1 h-[38px]">
+              <X className="w-4 h-4" /> Pastro
+            </Button>
+          )}
+          <span className="text-sm text-gray-500 ml-2">{filteredReports.length} raporte</span>
+        </div>
+      </Card>
+
       <Card>
-        {logs.length === 0 ? (
-          <EmptyState title="Nuk ka regjistrime ende" description="Fillo duke regjistruar aktivitetet ditore"
-            action={<Button onClick={() => setIsModalOpen(true)}><Plus className="w-5 h-5 mr-2" />Shto Regjistrimin e Parë</Button>} />
+        {filteredReports.length === 0 ? (
+          <EmptyState title={hasFilters ? "Asnjë raport në këtë interval" : "Nuk ka raporte ende"} description={hasFilters ? "Provo datë tjetër" : "Raportet krijohen automatikisht kur kalon dita"} />
         ) : (
           <>
             <Table>
               <TableHeader>
                 <TableHeaderCell>Data</TableHeaderCell>
-                <TableHeaderCell>Përshkrimi</TableHeaderCell>
-                <TableHeaderCell>Stafi</TableHeaderCell>
-                <TableHeaderCell>Veprime</TableHeaderCell>
+                <TableHeaderCell>Dita</TableHeaderCell>
+                <TableHeaderCell>Printo</TableHeaderCell>
               </TableHeader>
               <TableBody>
-                {paginatedLogs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell><span className="font-medium">{formatDate(log.log_date)}</span></TableCell>
-                    <TableCell>{log.description}</TableCell>
-                    <TableCell><span className="text-sm text-gray-600">{log.staff_email}</span></TableCell>
-                    <TableCell><Button variant="danger" size="sm" onClick={() => handleDelete(log.id)}><Trash2 className="w-4 h-4" /></Button></TableCell>
+                {paginatedReports.map((report) => (
+                  <TableRow key={report.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <span className="font-medium">{formatDate(report.dateObj)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-medium text-primary-600">{report.dayName}</span>
+                    </TableCell>
+                    <TableCell>
+                      <Button size="sm" variant="secondary" onClick={() => handlePrint(report)} className="flex items-center gap-1">
+                        <Printer className="w-4 h-4" /> Printo Raportin
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={logs.length} />
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={filteredReports.length} />
           </>
         )}
       </Card>
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Shto Regjistrim Ditor">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input label="Data" type="date" value={formData.log_date} onChange={(e) => setFormData({ ...formData, log_date: e.target.value })} required />
-          <TextArea label="Përshkrimi" rows={4} value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} required />
-          <div className="flex gap-3 justify-end pt-4">
-            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Anulo</Button>
-            <Button type="submit" disabled={submitting}>{submitting ? 'Duke shtuar...' : 'Shto Regjistrimin'}</Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   )
 }
 
 export const Invoices = () => {
-  const { orders, loading } = useOrders()
+  const { orders, loading } = useOrders(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -105,8 +198,8 @@ export const Invoices = () => {
       const q = searchQuery.toLowerCase()
       result = result.filter(o => (o.clients?.full_name||'').toLowerCase().includes(q) || (o.cars?.license_plate||'').toLowerCase().includes(q) || (o.cars?.vin||'').toLowerCase().includes(q))
     }
-    if (dateFrom) { const f = new Date(dateFrom); f.setHours(0,0,0,0); result = result.filter(o => new Date(o.created_at) >= f) }
-    if (dateTo) { const t = new Date(dateTo); t.setHours(23,59,59,999); result = result.filter(o => new Date(o.created_at) <= t) }
+    if (dateFrom) result = result.filter(o => getLocalDate(o.created_at) >= dateFrom)
+    if (dateTo) result = result.filter(o => getLocalDate(o.created_at) <= dateTo)
     return result
   }, [orders, searchQuery, dateFrom, dateTo])
 
