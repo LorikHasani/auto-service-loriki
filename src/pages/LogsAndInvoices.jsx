@@ -11,21 +11,13 @@ import { printOrderDocument, printDailyReport } from '../utils/printOrder'
 import { supabase } from '../services/supabase'
 import { useAuth } from '../context/AuthContext'
 
-const getLocalDate = (timestamp) => {
-  const d = new Date(timestamp)
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
-}
-
 const DAYS_SQ = ['E Diel', 'E Hënë', 'E Martë', 'E Mërkurë', 'E Enjte', 'E Premte', 'E Shtunë']
 const AUTO_TAG = '[RAPORT-AUTO]'
 
-const todayISO = () => {
-  const d = new Date()
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
-}
+const todayISO = () => new Date().toISOString().split('T')[0]
 
 export const Logs = () => {
-  const { orders, loading: ordersLoading } = useOrders(true)
+  const { orders, loading: ordersLoading } = useOrders()
   const { logs, loading: logsLoading, refetch: refetchLogs } = useLogs()
   const { user } = useAuth()
   const autoSaveRan = useRef(false)
@@ -43,7 +35,7 @@ export const Logs = () => {
       const today = todayISO()
       const ordersByDate = {}
       orders.forEach(o => {
-        const d = getLocalDate(o.created_at)
+        const d = new Date(o.created_at).toISOString().split('T')[0]
         if (d < today) {
           if (!ordersByDate[d]) ordersByDate[d] = []
           ordersByDate[d].push(o)
@@ -110,7 +102,12 @@ export const Logs = () => {
   const clearFilters = () => { setDateFrom(''); setDateTo('') }
 
   const handlePrint = (report) => {
-    const dayOrders = orders.filter(o => getLocalDate(o.created_at) === report.date)
+    const dayStart = new Date(report.date + 'T00:00:00')
+    const dayEnd = new Date(report.date + 'T23:59:59')
+    const dayOrders = orders.filter(o => {
+      const d = new Date(o.created_at)
+      return d >= dayStart && d <= dayEnd
+    })
     printDailyReport(dayOrders, report.dayName + ' — ' + formatDate(report.dateObj))
   }
 
