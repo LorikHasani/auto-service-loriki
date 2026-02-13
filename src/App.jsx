@@ -12,6 +12,7 @@ import { Orders } from './pages/Orders'
 import { Archive } from './pages/Archive'
 import { Logs, Invoices } from './pages/LogsAndInvoices'
 import { Employees } from './pages/Employees'
+import { ActiveServices } from './pages/ActiveServices'
 import { Sidebar } from './components/Sidebar'
 import { Loading } from './components/Loading'
 
@@ -66,6 +67,7 @@ function AppRoutes() {
       <Route path="/services" element={<P><Services /></P>} />
       <Route path="/employees" element={<P><Employees /></P>} />
       <Route path="/orders" element={<P><Orders /></P>} />
+      <Route path="/active-services" element={<P><ActiveServices /></P>} />
       <Route path="/archive" element={<P><Archive /></P>} />
       <Route path="/logs" element={<P><Logs /></P>} />
       <Route path="/invoices" element={<P><Invoices /></P>} />

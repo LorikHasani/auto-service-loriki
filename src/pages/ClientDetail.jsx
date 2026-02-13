@@ -7,7 +7,7 @@ import { Modal } from '../components/Modal'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
 import { Loading, EmptyState } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
-import { formatCurrency, calculateOrderTotal, formatDate } from '../utils/helpers'
+import { formatCurrency, calculateOrderTotal, formatDate, formatDurationShort } from '../utils/helpers'
 import { printOrderDocument } from '../utils/printOrder'
 import { supabase } from '../services/supabase'
 
@@ -176,6 +176,7 @@ export const ClientDetail = () => {
                 <TableHeaderCell>Km</TableHeaderCell>
                 <TableHeaderCell>Shërbimet</TableHeaderCell>
                 <TableHeaderCell>Totali</TableHeaderCell>
+                <TableHeaderCell>Kohëzgjatja</TableHeaderCell>
                 <TableHeaderCell>Statusi</TableHeaderCell>
                 <TableHeaderCell>Data</TableHeaderCell>
                 <TableHeaderCell>Printo</TableHeaderCell>
@@ -188,6 +189,7 @@ export const ClientDetail = () => {
                     <TableCell><span className="text-sm">{order.km ? Number(order.km).toLocaleString() + ' km' : '\u2014'}</span></TableCell>
                     <TableCell><div className="text-sm text-gray-600">{order.order_items?.map((item, idx) => <div key={idx}>• {item.service_name}</div>)}</div></TableCell>
                     <TableCell><span className="font-semibold">{formatCurrency(calculateOrderTotal(order))}</span></TableCell>
+                    <TableCell><span className="text-sm text-gray-600 font-mono">{formatDurationShort(order.service_duration)}</span></TableCell>
                     <TableCell><Badge variant={order.is_paid ? 'success' : 'danger'}>{order.is_paid ? 'Paguar' : 'Pa paguar'}</Badge></TableCell>
                     <TableCell><div className="flex items-center gap-1.5 text-sm text-gray-600"><Calendar className="w-3.5 h-3.5" />{formatDate(order.created_at)}</div></TableCell>
                     <TableCell>

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { DollarSign, TrendingUp, Package, AlertCircle, Calendar, X, Printer, Eye } from 'lucide-react'
+import { DollarSign, TrendingUp, Package, AlertCircle, Calendar, X, Printer, Eye, Users, Crown } from 'lucide-react'
 import { Card, StatCard } from '../components/Card'
 import { Button } from '../components/Button'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
@@ -49,6 +49,26 @@ export const Dashboard = () => {
     }, { totalRevenue: 0, totalCOGS: 0, pendingOrders: 0 })
     c.netProfit = c.totalRevenue - c.totalCOGS
     return c
+  }, [filteredOrders])
+
+  // Top client by number of services
+  const topClients = useMemo(() => {
+    const byServices = {}
+    const byPayments = {}
+    filteredOrders.forEach(o => {
+      const name = o.clients?.full_name || 'N/A'
+      byServices[name] = (byServices[name] || 0) + 1
+      if (o.is_paid) {
+        const total = (o.order_items || []).reduce((s, i) => s + (i.quantity * i.unit_price), 0)
+        byPayments[name] = (byPayments[name] || 0) + total
+      }
+    })
+    const topService = Object.entries(byServices).sort((a, b) => b[1] - a[1])[0]
+    const topPayment = Object.entries(byPayments).sort((a, b) => b[1] - a[1])[0]
+    return {
+      mostServices: topService ? { name: topService[0], count: topService[1] } : null,
+      mostPaid: topPayment ? { name: topPayment[0], amount: topPayment[1] } : null
+    }
   }, [filteredOrders])
 
   const { totalPages } = usePagination(filteredOrders)
@@ -117,6 +137,36 @@ export const Dashboard = () => {
         <StatCard label="Fitimi Neto" value={formatCurrency(stats.netProfit)} icon={TrendingUp} color="success" />
         <StatCard label="Kosto (COGS)" value={formatCurrency(stats.totalCOGS)} icon={Package} color="warning" />
         <StatCard label="Pa Paguar" value={stats.pendingOrders} icon={AlertCircle} color="danger" />
+      </div>
+
+      {/* Top Clients */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="!p-4 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+            <Users className="w-6 h-6 text-blue-500" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Më shumë servisime</p>
+            {topClients.mostServices ? (
+              <p className="text-lg font-bold text-dark-500">{topClients.mostServices.name} <span className="text-sm font-normal text-gray-500">— {topClients.mostServices.count} servisime</span></p>
+            ) : (
+              <p className="text-sm text-gray-400">Nuk ka të dhëna</p>
+            )}
+          </div>
+        </Card>
+        <Card className="!p-4 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+            <Crown className="w-6 h-6 text-amber-500" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Më shumë pagesa</p>
+            {topClients.mostPaid ? (
+              <p className="text-lg font-bold text-dark-500">{topClients.mostPaid.name} <span className="text-sm font-normal text-gray-500">— {formatCurrency(topClients.mostPaid.amount)}</span></p>
+            ) : (
+              <p className="text-sm text-gray-400">Nuk ka të dhëna</p>
+            )}
+          </div>
+        </Card>
       </div>
 
       <Card>

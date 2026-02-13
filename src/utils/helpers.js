@@ -39,3 +39,12 @@ export const calculateOrderCOGS = (order) => {
 export const classNames = (...classes) => {
   return classes.filter(Boolean).join(' ')
 }
+
+export const formatDurationShort = (seconds) => {
+  if (!seconds) return '—'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  if (h > 0) return h + 'h ' + m + 'min'
+  if (m > 0) return m + 'min'
+  return seconds + 's'
+}

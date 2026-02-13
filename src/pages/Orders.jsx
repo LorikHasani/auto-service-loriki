@@ -9,7 +9,7 @@ import { Loading, EmptyState } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
 import { SearchableSelect } from '../components/SearchableSelect'
 import { useOrders, useClients, useCars, useServices, useEmployees } from '../hooks/useData'
-import { formatCurrency, calculateOrderTotal, formatDate } from '../utils/helpers'
+import { formatCurrency, calculateOrderTotal, formatDate, formatDurationShort } from '../utils/helpers'
 import { printOrderDocument } from '../utils/printOrder'
 import { supabase } from '../services/supabase'
 
@@ -176,9 +176,32 @@ export const Orders = () => {
     catch (error) { alert('Gabim: ' + error.message) }
   }
 
+  const deleteOrder = async (id) => {
+    if (!confirm('Je i sigurt që dëshiron ta fshish këtë servisim? Kjo veprim nuk mund të kthehet.')) return
+    try {
+      const { error: itemsErr } = await supabase.from('order_items').delete().eq('order_id', id)
+      if (itemsErr) throw itemsErr
+      const { error: orderErr } = await supabase.from('orders').delete().eq('id', id)
+      if (orderErr) throw orderErr
+      // Also remove from lifts if present
+      try {
+        const lifts = JSON.parse(localStorage.getItem('autoservice_lifts_v2') || '[]')
+        const idx = lifts.findIndex(l => l && l.orderId === id)
+        if (idx !== -1) { lifts[idx] = null; localStorage.setItem('autoservice_lifts_v2', JSON.stringify(lifts)) }
+      } catch {}
+      refetch()
+    } catch (error) { alert('Gabim: ' + error.message) }
+  }
+
+  // Get lift IDs for status column
+  const getLiftIds = () => {
+    try { return JSON.parse(localStorage.getItem('autoservice_lifts_v2') || '[]').map(l => l ? l.orderId : null) } catch { return [] }
+  }
+  const liftIds = getLiftIds()
+
   const archiveOldOrders = async () => {
     setArchiving(true)
-    try { const { error } = await supabase.rpc('archive_old_orders'); if (error) throw error; refetch(); setIsArchiveModalOpen(false); alert('Porositë e vjetra u arkivuan!') }
+    try { const { error } = await supabase.rpc('archive_old_orders'); if (error) throw error; refetch(); setIsArchiveModalOpen(false); alert('Servisimet e vjetra u arkivuan!') }
     catch (error) { alert('Gabim: ' + error.message) }
     finally { setArchiving(false) }
   }
@@ -200,19 +223,19 @@ export const Orders = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-display text-dark-500 mb-2">Porositë</h1>
-          <p className="text-gray-600">Porositë aktive të servisit</p>
+          <h1 className="text-4xl font-display text-dark-500 mb-2">Servisimet</h1>
+          <p className="text-gray-600">Servisimet aktive</p>
         </div>
         <div className="flex gap-3">
           <Button onClick={() => setIsArchiveModalOpen(true)} variant="secondary" className="flex items-center gap-2"><Archive className="w-5 h-5" /> Arkivo</Button>
-          <Button onClick={openCreateModal} className="flex items-center gap-2"><Plus className="w-5 h-5" /> Porosi e Re</Button>
+          <Button onClick={openCreateModal} className="flex items-center gap-2"><Plus className="w-5 h-5" /> Servisim i Ri</Button>
         </div>
       </div>
 
       <Card>
         {orders.length === 0 ? (
-          <EmptyState title="Nuk ka porosi aktive" description="Krijo porosinë e parë të servisit"
-            action={<Button onClick={openCreateModal}><Plus className="w-5 h-5 mr-2" />Krijo Porosi</Button>} />
+          <EmptyState title="Nuk ka servisime aktive" description="Krijo servisimin e parë"
+            action={<Button onClick={openCreateModal}><Plus className="w-5 h-5 mr-2" />Krijo Servisim</Button>} />
         ) : (
           <>
           <Table>
@@ -224,11 +247,15 @@ export const Orders = () => {
               <TableHeaderCell>Punonjësi</TableHeaderCell>
               <TableHeaderCell>Shërbimet</TableHeaderCell>
               <TableHeaderCell>Totali</TableHeaderCell>
+              <TableHeaderCell>Kohëzgjatja</TableHeaderCell>
               <TableHeaderCell>Statusi</TableHeaderCell>
+              <TableHeaderCell>Pagesa</TableHeaderCell>
               <TableHeaderCell>Veprime</TableHeaderCell>
             </TableHeader>
             <TableBody>
-              {paginatedOrders.map((order) => (
+              {paginatedOrders.map((order) => {
+                const isInLift = liftIds.includes(order.id)
+                return (
                 <TableRow key={order.id}>
                   <TableCell><span className="font-mono font-semibold">#{order.id}</span></TableCell>
                   <TableCell><span className="font-medium">{order.clients?.full_name}</span></TableCell>
@@ -246,6 +273,16 @@ export const Orders = () => {
                     </div>
                   </TableCell>
                   <TableCell><span className="font-semibold">{formatCurrency(calculateOrderTotal(order))}</span></TableCell>
+                  <TableCell>
+                    <span className="text-sm text-gray-600 font-mono">{formatDurationShort(order.service_duration)}</span>
+                  </TableCell>
+                  <TableCell>
+                    {isInLift ? (
+                      <Badge variant="warning">Në Lift</Badge>
+                    ) : (
+                      <Badge variant="success">E përfunduar</Badge>
+                    )}
+                  </TableCell>
                   <TableCell><Badge variant={order.is_paid ? 'success' : 'danger'}>{order.is_paid ? 'Paguar' : 'Pa paguar'}</Badge></TableCell>
                   <TableCell>
                     <div className="flex gap-1.5">
@@ -259,10 +296,13 @@ export const Orders = () => {
                       <Button size="sm" variant="secondary" onClick={() => openPrintModal(order)} title="Printo">
                         <Printer className="w-4 h-4" />
                       </Button>
+                      <Button size="sm" variant="danger" onClick={() => deleteOrder(order.id)} title="Fshi">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              )})}
             </TableBody>
           </Table>
           <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={orders.length} />
@@ -271,7 +311,7 @@ export const Orders = () => {
       </Card>
 
       {/* Create / Edit Order Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); resetForm() }} title={editingOrder ? 'Ndrysho Porosinë #' + editingOrder.id : 'Krijo Porosi'} size="lg">
+      <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); resetForm() }} title={editingOrder ? 'Ndrysho Servisimin #' + editingOrder.id : 'Krijo Servisim'} size="lg">
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-2 gap-3">
             <SearchableSelect label="Klienti" value={formData.client_id}
@@ -373,7 +413,7 @@ export const Orders = () => {
 
           <div className="flex gap-3 justify-end pt-3 border-t">
             <Button type="button" variant="outline" onClick={() => { setIsModalOpen(false); resetForm() }}>Anulo</Button>
-            <Button type="submit" disabled={submitting}>{submitting ? 'Duke ruajtur...' : editingOrder ? 'Përditëso Porosinë' : 'Krijo Porosinë'}</Button>
+            <Button type="submit" disabled={submitting}>{submitting ? 'Duke ruajtur...' : editingOrder ? 'Përditëso Servisimin' : 'Krijo Servisimnë'}</Button>
           </div>
         </form>
       </Modal>
@@ -408,15 +448,15 @@ export const Orders = () => {
       </Modal>
 
       {/* Archive Modal */}
-      <Modal isOpen={isArchiveModalOpen} onClose={() => setIsArchiveModalOpen(false)} title="Arkivo Porositë e Vjetra">
+      <Modal isOpen={isArchiveModalOpen} onClose={() => setIsArchiveModalOpen(false)} title="Arkivo Servisimet e Vjetra">
         <div className="space-y-4">
           <p className="text-gray-700">Kjo do të arkivojë të gjitha porositë më të vjetra se 1 ditë.</p>
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-            <p className="text-sm text-yellow-800">Porositë para {formatDate(new Date(Date.now() - 24 * 60 * 60 * 1000))} do të arkivohen.</p>
+            <p className="text-sm text-yellow-800">Servisimet para {formatDate(new Date(Date.now() - 24 * 60 * 60 * 1000))} do të arkivohen.</p>
           </div>
           <div className="flex gap-3 justify-end pt-3">
             <Button type="button" variant="outline" onClick={() => setIsArchiveModalOpen(false)}>Anulo</Button>
-            <Button variant="secondary" onClick={archiveOldOrders} disabled={archiving}>{archiving ? 'Duke arkivuar...' : 'Arkivo Porositë'}</Button>
+            <Button variant="secondary" onClick={archiveOldOrders} disabled={archiving}>{archiving ? 'Duke arkivuar...' : 'Arkivo Servisimet'}</Button>
           </div>
         </div>
       </Modal>

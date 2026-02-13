@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { 
   LayoutDashboard, Users, Car, Wrench, FileText, 
-  Archive, ClipboardList, Receipt, LogOut, Gauge, UserCog
+  Archive, ClipboardList, Receipt, LogOut, Gauge, UserCog, Cog
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -9,12 +9,12 @@ const navigation = [
   { name: 'Paneli', to: '/', icon: LayoutDashboard },
   { name: 'Klientët', to: '/clients', icon: Users },
   { name: 'Automjetet', to: '/vehicles', icon: Car },
-  { name: 'Shërbimet', to: '/services', icon: Wrench },
-  { name: 'Punonjësit', to: '/employees', icon: UserCog },
-  { name: 'Porositë', to: '/orders', icon: FileText },
-  { name: 'Arkiva', to: '/archive', icon: Archive },
+  { name: 'Servisimet Aktive', to: '/active-services', icon: Cog },
+  { name: 'Servisimet', to: '/orders', icon: Wrench },
   { name: 'Raportet Ditore', to: '/logs', icon: ClipboardList },
+  { name: 'Arkiva', to: '/archive', icon: Archive },
   { name: 'Faturat', to: '/invoices', icon: Receipt },
+  { name: 'Punonjësit', to: '/employees', icon: UserCog },
 ]
 
 export const Sidebar = () => {
