@@ -1,21 +1,17 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Printer, CheckCircle, XCircle, Trash2, Archive, X, Edit2 } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
-import { Input, Select } from '../components/Input'
+import { Input } from '../components/Input'
 import { Modal } from '../components/Modal'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
 import { Loading, EmptyState } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
+import { SearchableSelect } from '../components/SearchableSelect'
 import { useOrders, useClients, useCars, useServices, useEmployees } from '../hooks/useData'
 import { formatCurrency, calculateOrderTotal, formatDate } from '../utils/helpers'
 import { printOrderDocument } from '../utils/printOrder'
 import { supabase } from '../services/supabase'
-
-const getLocalDate = (timestamp) => {
-  const d = new Date(timestamp)
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
-}
 
 export const Orders = () => {
   const { orders, loading, refetch } = useOrders(false)
@@ -23,7 +19,6 @@ export const Orders = () => {
   const { cars } = useCars()
   const { services } = useServices()
   const { employees } = useEmployees()
-  const autoArchiveRan = useRef(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
@@ -41,31 +36,6 @@ export const Orders = () => {
   const [submitting, setSubmitting] = useState(false)
   const [archiving, setArchiving] = useState(false)
   const [page, setPage] = useState(1)
-
-  // Auto-archive orders from previous days
-  useEffect(() => {
-    if (loading || autoArchiveRan.current || !orders.length) return
-    autoArchiveRan.current = true
-
-    const today = getLocalDate(new Date())
-    const oldOrders = orders.filter(o => getLocalDate(o.created_at) < today && !o.is_archived)
-    if (oldOrders.length === 0) return
-
-    const archiveOld = async () => {
-      try {
-        const ids = oldOrders.map(o => o.id)
-        const { error } = await supabase
-          .from('orders')
-          .update({ is_archived: true, archived_at: new Date().toISOString() })
-          .in('id', ids)
-        if (error) throw error
-        refetch()
-      } catch (err) {
-        console.error('Auto-archive failed:', err)
-      }
-    }
-    archiveOld()
-  }, [loading, orders, refetch])
 
   useEffect(() => {
     if (formData.client_id) {
@@ -304,23 +274,23 @@ export const Orders = () => {
       <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); resetForm() }} title={editingOrder ? 'Ndrysho Porosinë #' + editingOrder.id : 'Krijo Porosi'} size="lg">
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-2 gap-3">
-            <Select label="Klienti" value={formData.client_id} onChange={(e) => setFormData({ ...formData, client_id: e.target.value, car_id: '' })} required>
-              <option value="">Zgjidh Klientin</option>
-              {clients.map((c) => <option key={c.id} value={c.id}>{c.full_name}</option>)}
-            </Select>
-            <Select label="Automjeti" value={formData.car_id} onChange={(e) => setFormData({ ...formData, car_id: e.target.value })} required disabled={!formData.client_id}>
-              <option value="">Zgjidh Automjetin</option>
-              {clientCars.map((c) => <option key={c.id} value={c.id}>{c.make} {c.model} ({c.license_plate})</option>)}
-            </Select>
+            <SearchableSelect label="Klienti" value={formData.client_id}
+              onChange={(val) => setFormData({ ...formData, client_id: val, car_id: '' })} required
+              placeholder="Kërko klientin..."
+              options={clients.map(c => ({ value: c.id, label: c.full_name, sub: c.phone }))} />
+            <SearchableSelect label="Automjeti" value={formData.car_id}
+              onChange={(val) => setFormData({ ...formData, car_id: val })} required
+              placeholder={formData.client_id ? "Kërko automjetin..." : "Zgjidh klientin fillimisht"}
+              options={clientCars.map(c => ({ value: c.id, label: c.make + ' ' + c.model + ' (' + c.license_plate + ')' }))} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Input label="Kilometrazhi (Km)" type="number" min="0" value={formData.km}
               onChange={(e) => setFormData({ ...formData, km: e.target.value })} placeholder="p.sh., 125000" />
-            <Select label="Punonjësi" value={formData.employee_name} onChange={(e) => setFormData({ ...formData, employee_name: e.target.value })}>
-              <option value="">Zgjidh Punonjësin</option>
-              {employees.map((emp) => <option key={emp.id} value={emp.name}>{emp.name}</option>)}
-            </Select>
+            <SearchableSelect label="Punonjësi" value={formData.employee_name}
+              onChange={(val) => setFormData({ ...formData, employee_name: val })}
+              placeholder="Kërko punonjësin..."
+              options={employees.map(emp => ({ value: emp.name, label: emp.name }))} />
           </div>
 
           <div className="border-t pt-4">
@@ -336,10 +306,10 @@ export const Orders = () => {
                   <div key={si} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
-                        <Select label={'Shërbimi ' + (si + 1)} value={service.service_id} onChange={(e) => handleServiceSelect(si, e.target.value)} required>
-                          <option value="">Zgjidh Shërbimin</option>
-                          {services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </Select>
+                        <SearchableSelect label={'Shërbimi ' + (si + 1)} value={service.service_id}
+                          onChange={(val) => handleServiceSelect(si, val)} required
+                          placeholder="Kërko shërbimin..."
+                          options={services.map(s => ({ value: s.id, label: s.name }))} />
                       </div>
                       {orderServices.length > 1 && (
                         <button type="button" onClick={() => handleRemoveService(si)} className="ml-3 mt-7 text-red-500 hover:text-red-700 p-2"><X className="w-5 h-5" /></button>

@@ -41,3 +41,6 @@ CREATE POLICY "Enable delete for authenticated users" ON employees
 -- ============================================
 -- DONE
 -- ============================================
+
+-- Fix: Set NULL is_archived to false (for orders created before this column existed)
+UPDATE orders SET is_archived = false WHERE is_archived IS NULL;
