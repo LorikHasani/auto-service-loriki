@@ -90,7 +90,7 @@ export const ClientDetail = () => {
       <div className="flex items-center gap-4">
         <Button variant="outline" size="sm" onClick={() => navigate('/clients')} className="flex items-center gap-2"><ArrowLeft className="w-4 h-4" /> Kthehu</Button>
         <div>
-          <h1 className="text-4xl font-display text-dark-500">{client.full_name}</h1>
+          <h1 className="text-2xl sm:text-4xl font-display text-dark-500">{client.full_name}</h1>
           <p className="text-gray-600">Detajet e klientit dhe historia e porosive</p>
         </div>
       </div>

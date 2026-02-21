@@ -221,14 +221,14 @@ export const Orders = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-4xl font-display text-dark-500 mb-2">Servisimet</h1>
-          <p className="text-gray-600">Servisimet aktive</p>
+          <h1 className="text-2xl sm:text-4xl font-display text-dark-500 mb-1 sm:mb-2">Servisimet</h1>
+          <p className="text-sm text-gray-600">Servisimet aktive</p>
         </div>
-        <div className="flex gap-3">
-          <Button onClick={() => setIsArchiveModalOpen(true)} variant="secondary" className="flex items-center gap-2"><Archive className="w-5 h-5" /> Arkivo</Button>
-          <Button onClick={openCreateModal} className="flex items-center gap-2"><Plus className="w-5 h-5" /> Servisim i Ri</Button>
+        <div className="flex gap-2 sm:gap-3">
+          <Button onClick={() => setIsArchiveModalOpen(true)} variant="secondary" className="flex items-center gap-2 text-sm"><Archive className="w-4 h-4 sm:w-5 sm:h-5" /> <span className="hidden sm:inline">Arkivo</span></Button>
+          <Button onClick={openCreateModal} className="flex items-center gap-2 text-sm"><Plus className="w-4 h-4 sm:w-5 sm:h-5" /> <span className="hidden sm:inline">Servisim i Ri</span><span className="sm:hidden">+Ri</span></Button>
         </div>
       </div>
 
@@ -313,7 +313,7 @@ export const Orders = () => {
       {/* Create / Edit Order Modal */}
       <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); resetForm() }} title={editingOrder ? 'Ndrysho Servisimin #' + editingOrder.id : 'Krijo Servisim'} size="lg">
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <SearchableSelect label="Klienti" value={formData.client_id}
               onChange={(val) => setFormData({ ...formData, client_id: val, car_id: '' })} required
               placeholder="Kërko klientin..."
@@ -324,7 +324,7 @@ export const Orders = () => {
               options={clientCars.map(c => ({ value: c.id, label: c.make + ' ' + c.model + ' (' + c.license_plate + ')' }))} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Kilometrazhi (Km)" type="number" min="0" value={formData.km}
               onChange={(e) => setFormData({ ...formData, km: e.target.value })} placeholder="p.sh., 125000" />
             <SearchableSelect label="Punonjësi" value={formData.employee_name}

@@ -93,15 +93,15 @@ export const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-4xl font-display text-dark-500 mb-2">Paneli</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl sm:text-4xl font-display text-dark-500 mb-1 sm:mb-2">Paneli</h1>
+          <p className="text-sm sm:text-base text-gray-600">
             {isToday ? 'Pasqyra e ditës së sotme' : showAll ? 'Të gjitha porositë' : 'Porositë e filtruara'}
           </p>
         </div>
-        <Button onClick={handlePrintReport} className="flex items-center gap-2" variant="secondary">
-          <Printer className="w-5 h-5" /> Printo Raportin
+        <Button onClick={handlePrintReport} className="flex items-center gap-2 self-start" variant="secondary">
+          <Printer className="w-5 h-5" /> <span className="hidden sm:inline">Printo Raportin</span><span className="sm:hidden">Printo</span>
         </Button>
       </div>
 
@@ -132,7 +132,7 @@ export const Dashboard = () => {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <StatCard label="Të Ardhurat" value={formatCurrency(stats.totalRevenue)} icon={DollarSign} color="primary" />
         <StatCard label="Fitimi Neto" value={formatCurrency(stats.netProfit)} icon={TrendingUp} color="success" />
         <StatCard label="Kosto (COGS)" value={formatCurrency(stats.totalCOGS)} icon={Package} color="warning" />
@@ -140,28 +140,28 @@ export const Dashboard = () => {
       </div>
 
       {/* Top Clients */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="!p-4 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-            <Users className="w-6 h-6 text-blue-500" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
+        <Card className="!p-3 sm:!p-4 flex items-center gap-3 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
           </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Më shumë servisime</p>
+          <div className="min-w-0">
+            <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">Më shumë servisime</p>
             {topClients.mostServices ? (
-              <p className="text-lg font-bold text-dark-500">{topClients.mostServices.name} <span className="text-sm font-normal text-gray-500">— {topClients.mostServices.count} servisime</span></p>
+              <p className="text-sm sm:text-lg font-bold text-dark-500 truncate">{topClients.mostServices.name} <span className="text-xs sm:text-sm font-normal text-gray-500">— {topClients.mostServices.count} servisime</span></p>
             ) : (
               <p className="text-sm text-gray-400">Nuk ka të dhëna</p>
             )}
           </div>
         </Card>
-        <Card className="!p-4 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
-            <Crown className="w-6 h-6 text-amber-500" />
+        <Card className="!p-3 sm:!p-4 flex items-center gap-3 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+            <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
           </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Më shumë pagesa</p>
+          <div className="min-w-0">
+            <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">Më shumë pagesa</p>
             {topClients.mostPaid ? (
-              <p className="text-lg font-bold text-dark-500">{topClients.mostPaid.name} <span className="text-sm font-normal text-gray-500">— {formatCurrency(topClients.mostPaid.amount)}</span></p>
+              <p className="text-sm sm:text-lg font-bold text-dark-500 truncate">{topClients.mostPaid.name} <span className="text-xs sm:text-sm font-normal text-gray-500">— {formatCurrency(topClients.mostPaid.amount)}</span></p>
             ) : (
               <p className="text-sm text-gray-400">Nuk ka të dhëna</p>
             )}

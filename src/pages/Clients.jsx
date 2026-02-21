@@ -59,9 +59,9 @@ export const Clients = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-4xl font-display text-dark-500 mb-2">Klientët</h1>
+          <h1 className="text-2xl sm:text-4xl font-display text-dark-500 mb-2">Klientët</h1>
           <p className="text-gray-600">Menaxho bazën e klientëve</p>
         </div>
         <Button onClick={() => handleOpenModal()} className="flex items-center gap-2"><Plus className="w-5 h-5" /> Shto Klient</Button>

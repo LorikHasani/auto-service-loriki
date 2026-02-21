@@ -59,7 +59,7 @@ export const Archive = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-4xl font-display text-dark-500 mb-2">Arkiva</h1>
+        <h1 className="text-2xl sm:text-4xl font-display text-dark-500 mb-2">Arkiva</h1>
         <p className="text-gray-600">Shiko dhe menaxho servisimet e arkivuara</p>
       </div>
 

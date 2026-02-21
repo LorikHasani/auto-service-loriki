@@ -47,12 +47,12 @@ export const Services = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-4xl font-display text-dark-500 mb-2">Katalogu i Shërbimeve</h1>
-          <p className="text-gray-600">Menaxho emrat e shërbimeve për krijim të shpejtë porosish</p>
+          <h1 className="text-2xl sm:text-4xl font-display text-dark-500 mb-1 sm:mb-2">Katalogu i Shërbimeve</h1>
+          <p className="text-sm sm:text-base text-gray-600">Menaxho emrat e shërbimeve</p>
         </div>
-        <Button onClick={() => handleOpenModal()} className="flex items-center gap-2"><Plus className="w-5 h-5" /> Shto Shërbim</Button>
+        <Button onClick={() => handleOpenModal()} className="flex items-center gap-2 self-start"><Plus className="w-5 h-5" /> Shto Shërbim</Button>
       </div>
 
       <Card>
@@ -66,7 +66,7 @@ export const Services = () => {
                 <div key={service.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary-400 transition-all group">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-dark-500">{service.name}</span>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <button onClick={() => handleOpenModal(service)} className="p-1 hover:bg-gray-200 rounded"><Edit2 className="w-4 h-4 text-gray-600" /></button>
                       <button onClick={() => handleDelete(service.id)} className="p-1 hover:bg-red-100 rounded"><Trash2 className="w-4 h-4 text-red-600" /></button>
                     </div>

@@ -44,7 +44,7 @@ const AppLayout = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <main className="flex-1 p-6 overflow-auto">
+      <main className="flex-1 p-4 lg:p-6 overflow-auto pt-16 lg:pt-6">
         <div className="max-w-[1400px] mx-auto">{children}</div>
       </main>
     </div>

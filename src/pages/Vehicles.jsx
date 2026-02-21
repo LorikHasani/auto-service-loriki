@@ -75,9 +75,9 @@ export const Vehicles = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-4xl font-display text-dark-500 mb-2">Automjetet</h1>
+          <h1 className="text-2xl sm:text-4xl font-display text-dark-500 mb-2">Automjetet</h1>
           <p className="text-gray-600">Menaxho automjetet e klientëve</p>
         </div>
         <Button onClick={() => handleOpenModal()} className="flex items-center gap-2"><Plus className="w-5 h-5" /> Shto Automjet</Button>
@@ -142,11 +142,11 @@ export const Vehicles = () => {
             options={clients.map(c => ({ value: c.id, label: c.full_name, sub: c.phone }))}
             onAdd={() => setIsClientModalOpen(true)}
             addLabel="Shto klient të ri" />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Marka" value={formData.make} onChange={(e) => setFormData({ ...formData, make: e.target.value })} required />
             <Input label="Modeli" value={formData.model} onChange={(e) => setFormData({ ...formData, model: e.target.value })} required />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Viti" type="number" value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })} required />
             <Input label="Ngjyra" value={formData.color} onChange={(e) => setFormData({ ...formData, color: e.target.value })} />
           </div>

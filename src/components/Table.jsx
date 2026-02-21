@@ -2,8 +2,8 @@ import { classNames } from '../utils/helpers'
 
 export const Table = ({ children, className = '' }) => {
   return (
-    <div className="overflow-x-auto rounded-lg">
-      <table className={classNames('w-full', className)}>{children}</table>
+    <div className="overflow-x-auto rounded-lg -mx-4 sm:mx-0">
+      <table className={classNames('w-full min-w-[600px]', className)}>{children}</table>
     </div>
   )
 }
@@ -18,12 +18,7 @@ export const TableHeader = ({ children }) => {
 
 export const TableHeaderCell = ({ children, className = '' }) => {
   return (
-    <th
-      className={classNames(
-        'px-5 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider',
-        className
-      )}
-    >
+    <th className={classNames('px-3 sm:px-5 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider', className)}>
       {children}
     </th>
   )
@@ -43,7 +38,7 @@ export const TableRow = ({ children, className = '' }) => {
 
 export const TableCell = ({ children, className = '' }) => {
   return (
-    <td className={classNames('px-5 py-3.5 text-sm whitespace-nowrap', className)}>
+    <td className={classNames('px-3 sm:px-5 py-3 sm:py-3.5 text-sm whitespace-nowrap', className)}>
       {children}
     </td>
   )
@@ -57,14 +52,8 @@ export const Badge = ({ children, variant = 'default' }) => {
     info: 'bg-blue-50 text-blue-700 ring-1 ring-blue-600/20',
     default: 'bg-gray-50 text-gray-700 ring-1 ring-gray-600/20',
   }
-
   return (
-    <span
-      className={classNames(
-        'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold',
-        variants[variant]
-      )}
-    >
+    <span className={classNames('inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold', variants[variant])}>
       {children}
     </span>
   )

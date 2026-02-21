@@ -277,7 +277,7 @@ export const ActiveServices = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-4xl font-display text-dark-500 mb-2">Servisimet Aktive</h1>
+        <h1 className="text-2xl sm:text-4xl font-display text-dark-500 mb-2">Servisimet Aktive</h1>
         <p className="text-gray-600">
           {activeCount}/3 lifte aktive
           {activeCount > 0 && <span className="ml-2 inline-flex items-center gap-1"><span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" /> duke punuar</span>}
@@ -301,7 +301,7 @@ export const ActiveServices = () => {
       <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); resetForm() }}
         title={`Servisim i Ri — Lifti ${(selectedLift || 0) + 1}`} size="lg">
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <SearchableSelect label="Klienti" value={formData.client_id}
               onChange={(v) => setFormData({ ...formData, client_id: v, car_id: '' })} required
               placeholder="Kërko klientin..."
@@ -312,7 +312,7 @@ export const ActiveServices = () => {
               options={clientCars.map(c => ({ value: c.id, label: c.make + ' ' + c.model + ' (' + c.license_plate + ')' }))} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Kilometrazhi (Km)" type="number" min="0" value={formData.km}
               onChange={(e) => setFormData({ ...formData, km: e.target.value })} placeholder="p.sh., 125000" />
             <SearchableSelect label="Punonjësi" value={formData.employee_name}

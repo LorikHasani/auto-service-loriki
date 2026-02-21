@@ -46,9 +46,9 @@ export const Employees = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-4xl font-display text-dark-500 mb-2">Punonjësit</h1>
+          <h1 className="text-2xl sm:text-4xl font-display text-dark-500 mb-2">Punonjësit</h1>
           <p className="text-gray-600">Menaxho punonjësit e servisit</p>
         </div>
         <Button onClick={() => handleOpenModal()} className="flex items-center gap-2"><Plus className="w-5 h-5" /> Shto Punonjës</Button>
@@ -63,7 +63,7 @@ export const Employees = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {paginatedEmployees.map((emp) => (
                 <div key={emp.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary-400 transition-all group">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <span className="font-medium text-dark-500">{emp.name}</span>
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => handleOpenModal(emp)} className="p-1 hover:bg-gray-200 rounded"><Edit2 className="w-4 h-4 text-gray-600" /></button>
