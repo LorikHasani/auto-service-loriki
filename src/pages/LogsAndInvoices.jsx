@@ -190,6 +190,7 @@ export const Invoices = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [paymentFilter, setPaymentFilter] = useState('all')
   const [page, setPage] = useState(1)
 
   const filteredOrders = useMemo(() => {
@@ -200,16 +201,18 @@ export const Invoices = () => {
     }
     if (dateFrom) result = result.filter(o => getLocalDate(o.created_at) >= dateFrom)
     if (dateTo) result = result.filter(o => getLocalDate(o.created_at) <= dateTo)
+    if (paymentFilter === 'paid') result = result.filter(o => o.is_paid)
+    if (paymentFilter === 'unpaid') result = result.filter(o => !o.is_paid)
     return result
-  }, [orders, searchQuery, dateFrom, dateTo])
+  }, [orders, searchQuery, dateFrom, dateTo, paymentFilter])
 
-  useEffect(() => { setPage(1) }, [searchQuery, dateFrom, dateTo])
+  useEffect(() => { setPage(1) }, [searchQuery, dateFrom, dateTo, paymentFilter])
 
   const { totalPages } = usePagination(filteredOrders)
   const paginatedOrders = paginate(filteredOrders, page)
 
-  const clearFilters = () => { setSearchQuery(''); setDateFrom(''); setDateTo('') }
-  const hasFilters = searchQuery || dateFrom || dateTo
+  const clearFilters = () => { setSearchQuery(''); setDateFrom(''); setDateTo(''); setPaymentFilter('all') }
+  const hasFilters = searchQuery || dateFrom || dateTo || paymentFilter !== 'all'
 
   if (loading) return <Loading />
 
@@ -243,6 +246,14 @@ export const Invoices = () => {
             </div>
             {hasFilters && <Button variant="outline" size="sm" onClick={clearFilters} className="flex items-center gap-1 h-[42px]"><X className="w-4 h-4" /> Pastro</Button>}
           </div>
+        </div>
+        <div className="flex gap-2 mt-3">
+          {[['all', 'Të gjitha'], ['paid', 'Paguar'], ['unpaid', 'Pa paguar']].map(([val, label]) => (
+            <button key={val} onClick={() => setPaymentFilter(val)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${paymentFilter === val ? 'bg-primary-400 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              {label}
+            </button>
+          ))}
         </div>
         {hasFilters && <div className="mt-3 text-sm text-gray-500">Duke shfaqur {filteredOrders.length} nga {orders.length} fatura</div>}
       </Card>

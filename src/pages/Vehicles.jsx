@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Plus, Trash2, Edit2, Search } from 'lucide-react'
+import { Plus, Trash2, Edit2, Search, Wrench } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
@@ -14,11 +15,13 @@ import { supabase } from '../services/supabase'
 export const Vehicles = () => {
   const { cars, loading, refetch } = useCars()
   const { clients, refetch: refetchClients } = useClients()
+  const navigate = useNavigate()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isClientModalOpen, setIsClientModalOpen] = useState(false)
   const [editingCar, setEditingCar] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
+  const [formError, setFormError] = useState('')
   const emptyForm = { client_id: '', make: '', model: '', year: new Date().getFullYear(), color: '', license_plate: '', vin: '' }
   const [formData, setFormData] = useState(emptyForm)
   const [clientForm, setClientForm] = useState({ full_name: '', phone: '', email: '', address: '' })
@@ -40,13 +43,27 @@ export const Vehicles = () => {
     else { setEditingCar(null); setFormData(emptyForm) }
     setIsModalOpen(true)
   }
-  const handleCloseModal = () => { setIsModalOpen(false); setEditingCar(null); setFormData(emptyForm) }
+  const handleCloseModal = () => { setIsModalOpen(false); setEditingCar(null); setFormData(emptyForm); setFormError('') }
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); setSubmitting(true)
+    e.preventDefault(); setSubmitting(true); setFormError('')
     try {
-      if (editingCar) { const { error } = await supabase.from('cars').update(formData).eq('id', editingCar.id); if (error) throw error }
-      else { const { error } = await supabase.from('cars').insert([formData]); if (error) throw error }
+      const plate = formData.license_plate.trim().toUpperCase()
+      const vin = formData.vin?.trim().toUpperCase() || ''
+
+      // Check duplicate license plate
+      const dupPlate = cars.find(c => c.license_plate?.toUpperCase() === plate && (!editingCar || c.id !== editingCar.id))
+      if (dupPlate) { setFormError('Kjo targë ekziston tashmë: ' + dupPlate.clients?.full_name + ' — ' + dupPlate.make + ' ' + dupPlate.model); setSubmitting(false); return }
+
+      // Check duplicate VIN (only if VIN provided)
+      if (vin) {
+        const dupVin = cars.find(c => c.vin?.toUpperCase() === vin && (!editingCar || c.id !== editingCar.id))
+        if (dupVin) { setFormError('Ky VIN ekziston tashmë: ' + dupVin.clients?.full_name + ' — ' + dupVin.make + ' ' + dupVin.model); setSubmitting(false); return }
+      }
+
+      const data = { ...formData, license_plate: plate, vin: vin || null }
+      if (editingCar) { const { error } = await supabase.from('cars').update(data).eq('id', editingCar.id); if (error) throw error }
+      else { const { error } = await supabase.from('cars').insert([data]); if (error) throw error }
       handleCloseModal(); refetch()
     } catch (error) { alert('Gabim: ' + error.message) }
     finally { setSubmitting(false) }
@@ -69,6 +86,11 @@ export const Vehicles = () => {
     if (!confirm('Fshi këtë automjet?')) return
     try { const { error } = await supabase.from('cars').delete().eq('id', id); if (error) throw error; refetch() }
     catch (error) { alert('Gabim: ' + error.message) }
+  }
+
+  const handleNewService = (car) => {
+    // Navigate to active services with car info in state
+    navigate('/active-services', { state: { prefillCar: car } })
   }
 
   if (loading) return <Loading />
@@ -121,8 +143,9 @@ export const Vehicles = () => {
                     <TableCell><span className="text-gray-600 text-sm font-mono">{car.vin || 'N/A'}</span></TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button variant="secondary" size="sm" onClick={() => handleOpenModal(car)}><Edit2 className="w-4 h-4" /></Button>
-                        <Button variant="danger" size="sm" onClick={() => handleDelete(car.id)}><Trash2 className="w-4 h-4" /></Button>
+                        <Button variant="primary" size="sm" onClick={() => handleNewService(car)} title="Shto servisim"><Wrench className="w-4 h-4" /></Button>
+                        <Button variant="secondary" size="sm" onClick={() => handleOpenModal(car)} title="Ndrysho"><Edit2 className="w-4 h-4" /></Button>
+                        <Button variant="danger" size="sm" onClick={() => handleDelete(car.id)} title="Fshi"><Trash2 className="w-4 h-4" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -136,6 +159,9 @@ export const Vehicles = () => {
 
       <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingCar ? 'Ndrysho Automjetin' : 'Shto Automjet të Ri'}>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {formError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">{formError}</div>
+          )}
           <SearchableSelect label="Klienti" value={formData.client_id}
             onChange={(val) => setFormData({ ...formData, client_id: val })} required
             placeholder="Kërko klientin..."

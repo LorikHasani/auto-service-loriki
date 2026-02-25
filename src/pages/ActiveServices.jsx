@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Plus, X, Car, Wrench, User, Clock, CheckCircle, Trash2, Timer } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Modal } from '../components/Modal'
@@ -162,6 +163,7 @@ export const ActiveServices = () => {
   const { cars } = useCars()
   const { services } = useServices()
   const { employees } = useEmployees()
+  const location = useLocation()
 
   const [liftData, setLiftData] = useState(loadLifts())
   const [selectedLift, setSelectedLift] = useState(null)
@@ -173,6 +175,24 @@ export const ActiveServices = () => {
   const [orderServices, setOrderServices] = useState([
     { service_id: '', service_name: '', labor_cost: 0, parts: [{ name: '', quantity: 1, buy_price: 0, sell_price: 0 }] }
   ])
+
+  // Handle prefill from Vehicles page navigation
+  const prefillHandled = useRef(false)
+  useEffect(() => {
+    if (prefillHandled.current || ordersLoading) return
+    const prefillCar = location.state?.prefillCar
+    if (prefillCar) {
+      prefillHandled.current = true
+      // Find first free lift
+      const freeLift = liftData.findIndex(l => !l)
+      if (freeLift === -1) { alert('Të gjitha liftet janë të zëna!'); return }
+      setSelectedLift(freeLift)
+      setFormData({ client_id: String(prefillCar.client_id || ''), car_id: String(prefillCar.id || ''), km: '', employee_name: '' })
+      setIsModalOpen(true)
+      // Clear navigation state
+      window.history.replaceState({}, '')
+    }
+  }, [location.state, ordersLoading, liftData])
 
   useEffect(() => {
     if (formData.client_id) setClientCars(cars.filter(c => c.client_id === parseInt(formData.client_id)))
