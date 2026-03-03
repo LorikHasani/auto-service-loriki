@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Plus, Trash2, Edit2, Search, Wrench } from 'lucide-react'
+import { Plus, Trash2, Edit2, Search, Wrench, Clock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -89,8 +89,11 @@ export const Vehicles = () => {
   }
 
   const handleNewService = (car) => {
-    // Navigate to active services with car info in state
-    navigate('/active-services', { state: { prefillCar: car } })
+    navigate('/orders', { state: { prefillCar: car } })
+  }
+
+  const handleViewHistory = (car) => {
+    navigate('/clients/' + car.client_id)
   }
 
   if (loading) return <Loading />
@@ -144,6 +147,7 @@ export const Vehicles = () => {
                     <TableCell>
                       <div className="flex gap-2">
                         <Button variant="primary" size="sm" onClick={() => handleNewService(car)} title="Shto servisim"><Wrench className="w-4 h-4" /></Button>
+                        <Button variant="outline" size="sm" onClick={() => handleViewHistory(car)} title="Historia"><Clock className="w-4 h-4" /></Button>
                         <Button variant="secondary" size="sm" onClick={() => handleOpenModal(car)} title="Ndrysho"><Edit2 className="w-4 h-4" /></Button>
                         <Button variant="danger" size="sm" onClick={() => handleDelete(car.id)} title="Fshi"><Trash2 className="w-4 h-4" /></Button>
                       </div>

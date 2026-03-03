@@ -11,7 +11,7 @@ export const Card = ({ children, className = '' }) => {
   )
 }
 
-export const StatCard = ({ label, value, trend, icon: Icon, color = 'primary' }) => {
+export const StatCard = ({ label, value, trend, icon: Icon, color = 'primary', onClick }) => {
   const colors = {
     primary: { bg: 'bg-primary-50', text: 'text-primary-500', icon: 'bg-primary-400' },
     success: { bg: 'bg-green-50', text: 'text-green-600', icon: 'bg-green-500' },
@@ -21,7 +21,7 @@ export const StatCard = ({ label, value, trend, icon: Icon, color = 'primary' })
   const c = colors[color]
 
   return (
-    <div className={`${c.bg} rounded-xl border border-gray-100 p-3 sm:p-5 animate-slide-up`}>
+    <div className={`${c.bg} rounded-xl border border-gray-100 p-3 sm:p-5 animate-slide-up ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`} onClick={onClick}>
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider truncate">{label}</p>

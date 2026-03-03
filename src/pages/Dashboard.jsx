@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react'
-import { DollarSign, TrendingUp, Package, AlertCircle, Calendar, X, Printer, Eye, Users, Crown } from 'lucide-react'
+import { DollarSign, TrendingUp, Package, AlertCircle, Calendar, X, Printer, Eye, EyeOff, Users, Crown } from 'lucide-react'
 import { Card, StatCard } from '../components/Card'
 import { Button } from '../components/Button'
+import { Modal } from '../components/Modal'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
 import { Loading } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
@@ -27,6 +28,8 @@ export const Dashboard = () => {
   const [dateTo, setDateTo] = useState(todayISO())
   const [showAll, setShowAll] = useState(false)
   const [page, setPage] = useState(1)
+  const [isCOGSModalOpen, setIsCOGSModalOpen] = useState(false)
+  const [showFinancials, setShowFinancials] = useState(false)
 
   const filteredOrders = useMemo(() => {
     if (showAll && !dateFrom && !dateTo) return allOrders
@@ -49,6 +52,26 @@ export const Dashboard = () => {
     }, { totalRevenue: 0, totalCOGS: 0, pendingOrders: 0 })
     c.netProfit = c.totalRevenue - c.totalCOGS
     return c
+  }, [filteredOrders])
+
+  // COGS breakdown by order
+  const cogsBreakdown = useMemo(() => {
+    return filteredOrders
+      .map(order => {
+        const items = order.order_items || []
+        const parts = []
+        items.forEach(item => {
+          const pj = item.parts_json || []
+          pj.filter(p => p.name).forEach(p => {
+            parts.push({ name: p.name, qty: parseFloat(p.quantity) || 1, buyPrice: parseFloat(p.buy_price) || 0 })
+          })
+        })
+        const totalCost = parts.reduce((s, p) => s + (p.qty * p.buyPrice), 0)
+        if (totalCost <= 0) return null
+        return { id: order.id, client: order.clients?.full_name, car: (order.cars?.make || '') + ' ' + (order.cars?.model || ''), parts, totalCost }
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.totalCost - a.totalCost)
   }, [filteredOrders])
 
   // Top client by number of services
@@ -100,9 +123,16 @@ export const Dashboard = () => {
             {isToday ? 'Pasqyra e ditës së sotme' : showAll ? 'Të gjitha porositë' : 'Porositë e filtruara'}
           </p>
         </div>
-        <Button onClick={handlePrintReport} className="flex items-center gap-2 self-start" variant="secondary">
-          <Printer className="w-5 h-5" /> <span className="hidden sm:inline">Printo Raportin</span><span className="sm:hidden">Printo</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowFinancials(!showFinancials)}
+            className={`p-2.5 rounded-lg transition-colors ${showFinancials ? 'bg-primary-100 text-primary-500' : 'bg-gray-100 text-gray-400 hover:text-gray-500'}`}
+            title={showFinancials ? 'Fshih' : 'Shfaq'}>
+            {showFinancials ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+          </button>
+          <Button onClick={handlePrintReport} className="flex items-center gap-2" variant="secondary">
+            <Printer className="w-5 h-5" /> <span className="hidden sm:inline">Printo Raportin</span><span className="sm:hidden">Printo</span>
+          </Button>
+        </div>
       </div>
 
       <Card className="!p-4">
@@ -133,10 +163,11 @@ export const Dashboard = () => {
       </Card>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-        <StatCard label="Të Ardhurat" value={formatCurrency(stats.totalRevenue)} icon={DollarSign} color="primary" />
-        <StatCard label="Fitimi Neto" value={formatCurrency(stats.netProfit)} icon={TrendingUp} color="success" />
-        <StatCard label="Kosto (COGS)" value={formatCurrency(stats.totalCOGS)} icon={Package} color="warning" />
+        <StatCard label="Porosi" value={filteredOrders.length} icon={DollarSign} color="primary" />
         <StatCard label="Pa Paguar" value={stats.pendingOrders} icon={AlertCircle} color="danger" />
+        {showFinancials && <StatCard label="Të Ardhurat" value={formatCurrency(stats.totalRevenue)} icon={DollarSign} color="primary" />}
+        {showFinancials && <StatCard label="Fitimi Neto" value={formatCurrency(stats.netProfit)} icon={TrendingUp} color="success" />}
+        {showFinancials && <StatCard label="Kosto (COGS)" value={formatCurrency(stats.totalCOGS)} icon={Package} color="warning" onClick={() => setIsCOGSModalOpen(true)} />}
       </div>
 
       {/* Top Clients */}
@@ -154,19 +185,21 @@ export const Dashboard = () => {
             )}
           </div>
         </Card>
-        <Card className="!p-3 sm:!p-4 flex items-center gap-3 sm:gap-4">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
-            <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">Më shumë pagesa</p>
-            {topClients.mostPaid ? (
-              <p className="text-sm sm:text-lg font-bold text-dark-500 truncate">{topClients.mostPaid.name} <span className="text-xs sm:text-sm font-normal text-gray-500">— {formatCurrency(topClients.mostPaid.amount)}</span></p>
-            ) : (
-              <p className="text-sm text-gray-400">Nuk ka të dhëna</p>
-            )}
-          </div>
-        </Card>
+        {showFinancials && (
+          <Card className="!p-3 sm:!p-4 flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+              <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">Më shumë pagesa</p>
+              {topClients.mostPaid ? (
+                <p className="text-sm sm:text-lg font-bold text-dark-500 truncate">{topClients.mostPaid.name} <span className="text-xs sm:text-sm font-normal text-gray-500">— {formatCurrency(topClients.mostPaid.amount)}</span></p>
+              ) : (
+                <p className="text-sm text-gray-400">Nuk ka të dhëna</p>
+              )}
+            </div>
+          </Card>
+        )}
       </div>
 
       <Card>
@@ -186,7 +219,7 @@ export const Dashboard = () => {
                 <TableHeaderCell>ID</TableHeaderCell>
                 <TableHeaderCell>Klienti</TableHeaderCell>
                 <TableHeaderCell>Automjeti</TableHeaderCell>
-                <TableHeaderCell>Totali</TableHeaderCell>
+                {showFinancials && <TableHeaderCell>Totali</TableHeaderCell>}
                 <TableHeaderCell>Statusi</TableHeaderCell>
                 <TableHeaderCell>Data</TableHeaderCell>
               </TableHeader>
@@ -196,7 +229,7 @@ export const Dashboard = () => {
                     <TableCell><span className="font-mono font-semibold text-dark-500">#{order.id}</span></TableCell>
                     <TableCell><span className="font-medium">{order.clients?.full_name || 'N/A'}</span></TableCell>
                     <TableCell><span className="text-gray-600">{order.cars?.make} {order.cars?.model}</span></TableCell>
-                    <TableCell><span className="font-semibold text-dark-500">{formatCurrency(calculateOrderTotal(order))}</span></TableCell>
+                    {showFinancials && <TableCell><span className="font-semibold text-dark-500">{formatCurrency(calculateOrderTotal(order))}</span></TableCell>}
                     <TableCell><Badge variant={order.is_paid ? 'success' : 'danger'}>{order.is_paid ? 'Paguar' : 'Pa paguar'}</Badge></TableCell>
                     <TableCell><span className="text-gray-600">{formatDate(order.created_at)}</span></TableCell>
                   </TableRow>
@@ -207,6 +240,43 @@ export const Dashboard = () => {
           </>
         )}
       </Card>
+
+      {/* COGS Modal */}
+      <Modal isOpen={isCOGSModalOpen} onClose={() => setIsCOGSModalOpen(false)} title="Detajet e Kostos (COGS)" size="lg">
+        <div className="space-y-4">
+          <div className="bg-amber-50 rounded-lg p-4 border border-amber-200 text-center">
+            <div className="text-2xl font-bold text-amber-600">{formatCurrency(stats.totalCOGS)}</div>
+            <div className="text-sm text-gray-600 mt-1">Kosto Totale e Pjesëve</div>
+          </div>
+
+          {cogsBreakdown.length === 0 ? (
+            <p className="text-center text-gray-500 py-6">Nuk ka kosto pjesësh për këtë periudhë</p>
+          ) : (
+            <div className="space-y-3 max-h-[400px] overflow-y-auto">
+              {cogsBreakdown.map((item) => (
+                <div key={item.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <span className="font-mono font-semibold text-sm">#{item.id}</span>
+                      <span className="ml-2 font-medium">{item.client}</span>
+                      <span className="block text-sm text-gray-500">{item.car}</span>
+                    </div>
+                    <span className="font-bold text-amber-600">{formatCurrency(item.totalCost)}</span>
+                  </div>
+                  <div className="space-y-1 mt-2">
+                    {item.parts.map((p, pi) => (
+                      <div key={pi} className="flex justify-between text-sm pl-3 border-l-2 border-amber-300">
+                        <span className="text-gray-600">{p.name} {p.qty > 1 ? '×' + p.qty : ''}</span>
+                        <span className="text-gray-700">{formatCurrency(p.qty * p.buyPrice)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   )
 }

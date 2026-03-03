@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Printer, Search, X, Calendar } from 'lucide-react'
+import { Printer, Search, X, Calendar, Eye } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
+import { Modal } from '../components/Modal'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
 import { Loading, EmptyState } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
@@ -32,6 +33,9 @@ export const Logs = () => {
   const [page, setPage] = useState(1)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+  const [viewReport, setViewReport] = useState(null)
+  const [viewOrders, setViewOrders] = useState([])
 
   // Auto-save missing past-day reports
   useEffect(() => {
@@ -114,6 +118,13 @@ export const Logs = () => {
     printDailyReport(dayOrders, report.dayName + ' — ' + formatDate(report.dateObj))
   }
 
+  const handleView = (report) => {
+    const dayOrders = orders.filter(o => getLocalDate(o.created_at) === report.date)
+    setViewReport(report)
+    setViewOrders(dayOrders)
+    setIsViewModalOpen(true)
+  }
+
   if (ordersLoading || logsLoading) return <Loading />
 
   return (
@@ -154,7 +165,8 @@ export const Logs = () => {
               <TableHeader>
                 <TableHeaderCell>Data</TableHeaderCell>
                 <TableHeaderCell>Dita</TableHeaderCell>
-                <TableHeaderCell>Printo</TableHeaderCell>
+                <TableHeaderCell>Përmbledhje</TableHeaderCell>
+                <TableHeaderCell>Veprime</TableHeaderCell>
               </TableHeader>
               <TableBody>
                 {paginatedReports.map((report) => (
@@ -169,9 +181,17 @@ export const Logs = () => {
                       <span className="font-medium text-primary-600">{report.dayName}</span>
                     </TableCell>
                     <TableCell>
-                      <Button size="sm" variant="secondary" onClick={() => handlePrint(report)} className="flex items-center gap-1">
-                        <Printer className="w-4 h-4" /> Printo Raportin
-                      </Button>
+                      <span className="text-sm text-gray-600">{report.summary}</span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1.5">
+                        <Button size="sm" variant="outline" onClick={() => handleView(report)} title="Shiko raportin">
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={() => handlePrint(report)} title="Printo">
+                          <Printer className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -181,6 +201,76 @@ export const Logs = () => {
           </>
         )}
       </Card>
+
+      {/* View Report Modal */}
+      <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title={viewReport ? 'Raporti — ' + viewReport.dayName + ' ' + formatDate(viewReport.dateObj) : ''} size="lg">
+        {viewReport && (() => {
+          const grandTotal = viewOrders.reduce((s, o) => s + calculateOrderTotal(o), 0)
+          const paidTotal = viewOrders.filter(o => o.is_paid).reduce((s, o) => s + calculateOrderTotal(o), 0)
+          const unpaidTotal = viewOrders.filter(o => !o.is_paid).reduce((s, o) => s + calculateOrderTotal(o), 0)
+          const cogs = viewOrders.reduce((s, o) => s + (o.order_items || []).reduce((ss, i) => ss + (parseFloat(i.parts_cost) || 0), 0), 0)
+          return (
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-blue-50 rounded-lg p-3 text-center border border-blue-200">
+                  <div className="text-xl font-bold text-blue-600">{viewOrders.length}</div>
+                  <div className="text-xs text-gray-600 mt-1">Porosi</div>
+                </div>
+                <div className="bg-green-50 rounded-lg p-3 text-center border border-green-200">
+                  <div className="text-xl font-bold text-green-600">{formatCurrency(grandTotal)}</div>
+                  <div className="text-xs text-gray-600 mt-1">Të Ardhura</div>
+                </div>
+                <div className="bg-yellow-50 rounded-lg p-3 text-center border border-yellow-200">
+                  <div className="text-xl font-bold text-yellow-600">{formatCurrency(cogs)}</div>
+                  <div className="text-xs text-gray-600 mt-1">Kosto</div>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-3 text-center border border-purple-200">
+                  <div className="text-xl font-bold text-purple-600">{formatCurrency(grandTotal - cogs)}</div>
+                  <div className="text-xs text-gray-600 mt-1">Fitimi</div>
+                </div>
+              </div>
+
+              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                {viewOrders.map((order) => {
+                  const total = calculateOrderTotal(order)
+                  const items = order.order_items || []
+                  return (
+                    <div key={order.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <span className="font-mono font-semibold text-sm">#{order.id}</span>
+                          <span className="ml-2 font-medium">{order.clients?.full_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-primary-500">{formatCurrency(total)}</span>
+                          <Badge variant={order.is_paid ? 'success' : 'danger'}>{order.is_paid ? 'Paguar' : 'Pa paguar'}</Badge>
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-600 mb-1">
+                        {order.cars?.make} {order.cars?.model} — <span className="font-mono">{order.cars?.license_plate}</span>
+                      </div>
+                      <div className="space-y-1 mt-2">
+                        {items.map((item, idx) => (
+                          <div key={idx} className="flex justify-between text-sm pl-3 border-l-2 border-gray-300">
+                            <span className="font-medium">{item.service_name}</span>
+                            <span>{formatCurrency(item.unit_price)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="bg-primary-50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm"><span className="text-gray-600">Paguar:</span><span className="font-semibold text-green-600">{formatCurrency(paidTotal)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-600">Pa paguar:</span><span className="font-semibold text-red-600">{formatCurrency(unpaidTotal)}</span></div>
+                <div className="flex justify-between text-xl font-bold border-t pt-2"><span>TOTALI:</span><span className="text-primary-600">{formatCurrency(grandTotal)}</span></div>
+              </div>
+            </div>
+          )
+        })()}
+      </Modal>
     </div>
   )
 }

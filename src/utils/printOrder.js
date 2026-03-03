@@ -49,7 +49,7 @@ function buildProductRows(items, showPrices) {
     if (parts.length > 0) {
       if (laborCost > 0) {
         rowNum++
-        productRows += '<tr><td>' + rowNum + '</td><td><strong>' + item.service_name + '</strong> \u2014 Puna</td><td style="text-align:center">1</td>' +
+        productRows += '<tr><td>' + rowNum + '</td><td><strong>' + item.service_name + '</strong></td><td style="text-align:center">1</td>' +
           (showPrices ? '<td style="text-align:right">' + formatCurrency(laborCost) + '</td><td style="text-align:right"><strong>' + formatCurrency(laborCost) + '</strong></td>' : '') + '</tr>'
       }
       parts.forEach(part => {
