@@ -541,7 +541,7 @@ export const Orders = () => {
                             {parts.filter(p => p.name).map((p, pi) => (
                               <div key={pi} className="flex justify-between text-sm text-gray-600 pl-3 border-l-2 border-gray-300">
                                 <span>{p.name} {p.quantity > 1 ? '×' + p.quantity : ''}</span>
-                                {showDetailPrices && <span>{formatCurrency((p.sell_price || 0) * (p.quantity || 1))}</span>}
+                                {showDetailPrices && <span>{(parseFloat(p.buy_price) || 0) > 0 && <span className="text-red-500 text-xs mr-1">(-€{((parseFloat(p.buy_price) || 0) * (p.quantity || 1)).toFixed(2)})</span>}{formatCurrency((p.sell_price || 0) * (p.quantity || 1))}</span>}
                               </div>
                             ))}
                           </div>

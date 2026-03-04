@@ -30,7 +30,7 @@ export const Vehicles = () => {
   const filteredCars = useMemo(() => {
     if (!searchQuery.trim()) return cars
     const q = searchQuery.toLowerCase()
-    return cars.filter(car => (car.clients?.full_name || '').toLowerCase().includes(q) || (car.license_plate || '').toLowerCase().includes(q) || (car.vin || '').toLowerCase().includes(q))
+    return cars.filter(car => (car.clients?.full_name || '').toLowerCase().includes(q) || (car.license_plate || '').toLowerCase().includes(q) || (car.vin || '').toLowerCase().includes(q) || (car.make || '').toLowerCase().includes(q) || (car.model || '').toLowerCase().includes(q))
   }, [cars, searchQuery])
 
   useEffect(() => { setPage(1) }, [searchQuery])
@@ -112,7 +112,7 @@ export const Vehicles = () => {
         <Card className="!p-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input type="text" placeholder="Kërko sipas klientit, targës ose VIN..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            <input type="text" placeholder="Kërko sipas klientit, veturës, targës ose VIN..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all text-sm" />
           </div>
           {searchQuery && <div className="mt-2 text-sm text-gray-500">Duke shfaqur {filteredCars.length} nga {cars.length} automjete</div>}

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Printer, Search, X, Calendar, Eye } from 'lucide-react'
+import { Printer, Search, X, Calendar, Eye, EyeOff } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Modal } from '../components/Modal'
@@ -36,6 +36,7 @@ export const Logs = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [viewReport, setViewReport] = useState(null)
   const [viewOrders, setViewOrders] = useState([])
+  const [showFinancials, setShowFinancials] = useState(false)
 
   // Auto-save missing past-day reports
   useEffect(() => {
@@ -68,7 +69,7 @@ export const Logs = () => {
         const paid = dayOrders.filter(o => o.is_paid).length
         toInsert.push({
           log_date: dateStr,
-          description: `${AUTO_TAG} Porosi: ${dayOrders.length} | Paguar: ${paid}/${dayOrders.length} | Të ardhura: ${formatCurrency(rev)} | Fitimi: ${formatCurrency(rev - cogs)}`,
+          description: `${AUTO_TAG} Porosi: ${dayOrders.length} | Paguar: ${paid}/${dayOrders.length}`,
           staff_email: user?.email || 'system'
         })
       }
@@ -92,7 +93,7 @@ export const Logs = () => {
           date: l.log_date,
           dateObj,
           dayName: DAYS_SQ[dateObj.getDay()],
-          summary: l.description.replace(AUTO_TAG + ' ', '')
+          summary: l.description.replace(AUTO_TAG + ' ', '').replace(/\s*\|\s*Të ardhura:.*$/, '')
         }
       })
       .sort((a, b) => b.date.localeCompare(a.date))
@@ -203,7 +204,7 @@ export const Logs = () => {
       </Card>
 
       {/* View Report Modal */}
-      <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title={viewReport ? 'Raporti — ' + viewReport.dayName + ' ' + formatDate(viewReport.dateObj) : ''} size="lg">
+      <Modal isOpen={isViewModalOpen} onClose={() => { setIsViewModalOpen(false); setShowFinancials(false) }} title={viewReport ? 'Raporti — ' + viewReport.dayName + ' ' + formatDate(viewReport.dateObj) : ''} size="lg">
         {viewReport && (() => {
           const grandTotal = viewOrders.reduce((s, o) => s + calculateOrderTotal(o), 0)
           const paidTotal = viewOrders.filter(o => o.is_paid).reduce((s, o) => s + calculateOrderTotal(o), 0)
@@ -211,23 +212,31 @@ export const Logs = () => {
           const cogs = viewOrders.reduce((s, o) => s + (o.order_items || []).reduce((ss, i) => ss + (parseFloat(i.parts_cost) || 0), 0), 0)
           return (
             <div className="space-y-5">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className={`grid gap-3 ${showFinancials ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'}`}>
                 <div className="bg-blue-50 rounded-lg p-3 text-center border border-blue-200">
                   <div className="text-xl font-bold text-blue-600">{viewOrders.length}</div>
                   <div className="text-xs text-gray-600 mt-1">Porosi</div>
                 </div>
-                <div className="bg-green-50 rounded-lg p-3 text-center border border-green-200">
-                  <div className="text-xl font-bold text-green-600">{formatCurrency(grandTotal)}</div>
-                  <div className="text-xs text-gray-600 mt-1">Të Ardhura</div>
+                <div className="bg-blue-50 rounded-lg p-3 text-center border border-blue-200">
+                  <div className="text-xl font-bold text-blue-600">{viewOrders.filter(o => o.is_paid).length}/{viewOrders.length}</div>
+                  <div className="text-xs text-gray-600 mt-1">Paguar</div>
                 </div>
-                <div className="bg-yellow-50 rounded-lg p-3 text-center border border-yellow-200">
-                  <div className="text-xl font-bold text-yellow-600">{formatCurrency(cogs)}</div>
-                  <div className="text-xs text-gray-600 mt-1">Kosto</div>
-                </div>
-                <div className="bg-purple-50 rounded-lg p-3 text-center border border-purple-200">
-                  <div className="text-xl font-bold text-purple-600">{formatCurrency(grandTotal - cogs)}</div>
-                  <div className="text-xs text-gray-600 mt-1">Fitimi</div>
-                </div>
+                {showFinancials && (
+                  <>
+                    <div className="bg-green-50 rounded-lg p-3 text-center border border-green-200">
+                      <div className="text-xl font-bold text-green-600">{formatCurrency(grandTotal)}</div>
+                      <div className="text-xs text-gray-600 mt-1">Të Ardhura</div>
+                    </div>
+                    <div className="bg-yellow-50 rounded-lg p-3 text-center border border-yellow-200">
+                      <div className="text-xl font-bold text-yellow-600">{formatCurrency(cogs)}</div>
+                      <div className="text-xs text-gray-600 mt-1">Kosto</div>
+                    </div>
+                    <div className="bg-purple-50 rounded-lg p-3 text-center border border-purple-200">
+                      <div className="text-xl font-bold text-purple-600">{formatCurrency(grandTotal - cogs)}</div>
+                      <div className="text-xs text-gray-600 mt-1">Fitimi</div>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="space-y-3 max-h-[400px] overflow-y-auto">
@@ -242,7 +251,6 @@ export const Logs = () => {
                           <span className="ml-2 font-medium">{order.clients?.full_name}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-primary-500">{formatCurrency(total)}</span>
                           <Badge variant={order.is_paid ? 'success' : 'danger'}>{order.is_paid ? 'Paguar' : 'Pa paguar'}</Badge>
                         </div>
                       </div>
@@ -253,7 +261,6 @@ export const Logs = () => {
                         {items.map((item, idx) => (
                           <div key={idx} className="flex justify-between text-sm pl-3 border-l-2 border-gray-300">
                             <span className="font-medium">{item.service_name}</span>
-                            <span>{formatCurrency(item.unit_price)}</span>
                           </div>
                         ))}
                       </div>
@@ -263,9 +270,22 @@ export const Logs = () => {
               </div>
 
               <div className="bg-primary-50 rounded-lg p-4 space-y-2">
-                <div className="flex justify-between text-sm"><span className="text-gray-600">Paguar:</span><span className="font-semibold text-green-600">{formatCurrency(paidTotal)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-gray-600">Pa paguar:</span><span className="font-semibold text-red-600">{formatCurrency(unpaidTotal)}</span></div>
-                <div className="flex justify-between text-xl font-bold border-t pt-2"><span>TOTALI:</span><span className="text-primary-600">{formatCurrency(grandTotal)}</span></div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Porosi: <span className="font-bold text-dark-500">{viewOrders.length}</span></span>
+                  <button onClick={() => setShowFinancials(!showFinancials)}
+                    className={`p-2 rounded-lg transition-colors ${showFinancials ? 'bg-primary-200 text-primary-600' : 'bg-gray-200 text-gray-400'}`}>
+                    {showFinancials ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  </button>
+                </div>
+                {showFinancials && (
+                  <>
+                    <div className="flex justify-between text-sm border-t pt-2"><span className="text-gray-600">Paguar:</span><span className="font-semibold text-green-600">{formatCurrency(paidTotal)}</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-gray-600">Pa paguar:</span><span className="font-semibold text-red-600">{formatCurrency(unpaidTotal)}</span></div>
+                    <div className="flex justify-between text-xl font-bold border-t pt-2"><span>TOTALI:</span><span className="text-primary-600">{formatCurrency(grandTotal)}</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-gray-600">Kosto:</span><span className="font-semibold text-yellow-600">-{formatCurrency(cogs)}</span></div>
+                    <div className="flex justify-between text-xl font-bold"><span>FITIMI:</span><span className={grandTotal - cogs >= 0 ? 'text-green-600' : 'text-red-600'}>{formatCurrency(grandTotal - cogs)}</span></div>
+                  </>
+                )}
               </div>
             </div>
           )

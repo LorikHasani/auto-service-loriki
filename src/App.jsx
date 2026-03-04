@@ -15,6 +15,7 @@ import { Employees } from './pages/Employees'
 import { ActiveServices } from './pages/ActiveServices'
 import { Sidebar } from './components/Sidebar'
 import { Loading } from './components/Loading'
+import { PasswordGate } from './components/PasswordGate'
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth()
@@ -68,9 +69,9 @@ function AppRoutes() {
       <Route path="/employees" element={<P><Employees /></P>} />
       <Route path="/orders" element={<P><Orders /></P>} />
       <Route path="/active-services" element={<P><ActiveServices /></P>} />
-      <Route path="/archive" element={<P><Archive /></P>} />
-      <Route path="/logs" element={<P><Logs /></P>} />
-      <Route path="/invoices" element={<P><Invoices /></P>} />
+      <Route path="/archive" element={<P><PasswordGate><Archive /></PasswordGate></P>} />
+      <Route path="/logs" element={<P><PasswordGate><Logs /></PasswordGate></P>} />
+      <Route path="/invoices" element={<P><PasswordGate><Invoices /></PasswordGate></P>} />
     </Routes>
   )
 }

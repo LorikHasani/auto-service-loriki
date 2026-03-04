@@ -41,26 +41,29 @@ tr:last-child td{border-bottom:none}
 function buildProductRows(items, showPrices) {
   let productRows = ''
   let rowNum = 0
+  const colCount = showPrices ? 5 : 3
 
   items.forEach(item => {
     const parts = item.parts_json || []
     const laborCost = parseFloat(item.labor_cost) || 0
 
-    if (parts.length > 0) {
-      if (laborCost > 0) {
-        rowNum++
-        productRows += '<tr><td>' + rowNum + '</td><td><strong>' + item.service_name + '</strong></td><td style="text-align:center">1</td>' +
-          (showPrices ? '<td style="text-align:right">' + formatCurrency(laborCost) + '</td><td style="text-align:right"><strong>' + formatCurrency(laborCost) + '</strong></td>' : '') + '</tr>'
-      }
+    if (parts.length > 0 || laborCost > 0) {
+      // Service name as subtitle row spanning full width
+      productRows += '<tr><td colspan="' + colCount + '" style="background:#f8f9fa;padding:10px 16px;border-bottom:2px solid #FF6B35">' +
+        '<strong style="font-size:15px;color:#1a1a2e">' + item.service_name + '</strong>' +
+        (showPrices ? '<span style="float:right;font-weight:700;color:#FF6B35">' + formatCurrency(item.unit_price) + '</span>' : '') +
+        '</td></tr>'
+
       parts.forEach(part => {
         if (!part.name) return
         rowNum++
         const qty = parseFloat(part.quantity) || 1
         const price = parseFloat(part.sell_price) || 0
-        productRows += '<tr><td>' + rowNum + '</td><td>' + part.name + '</td><td style="text-align:center">' + qty + '</td>' +
+        productRows += '<tr><td style="padding-left:24px;color:#888">' + rowNum + '</td><td style="padding-left:8px">' + part.name + '</td><td style="text-align:center">' + qty + '</td>' +
           (showPrices ? '<td style="text-align:right">' + formatCurrency(price) + '</td><td style="text-align:right"><strong>' + formatCurrency(qty * price) + '</strong></td>' : '') + '</tr>'
       })
     } else {
+      // Service without parts — single row with number
       rowNum++
       productRows += '<tr><td>' + rowNum + '</td><td><strong>' + item.service_name + '</strong>' +
         (item.description ? '<div style="color:#888;font-size:13px;margin-top:2px">' + item.description + '</div>' : '') +
