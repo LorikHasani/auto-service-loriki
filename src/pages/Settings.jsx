@@ -1,27 +1,40 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Save, RotateCcw, Building2, Phone, MapPin, FileText,
   MessageSquare, Plus, Trash2, Check, BookTemplate, ChevronRight
 } from 'lucide-react'
 import {
   getSettings, saveSettings, DEFAULT_SETTINGS,
-  getTemplates, saveTemplate, deleteTemplate,
-  getActiveTemplateId, setActiveTemplate
+  getTemplates, createTemplate, saveTemplate, deleteTemplate,
+  setActiveTemplate
 } from '../utils/settings'
 
 export const Settings = () => {
-  const [templates, setTemplates] = useState(getTemplates)
-  const [activeId, setActiveId] = useState(getActiveTemplateId)
-  const [form, setForm] = useState(getSettings)
+  const [templates, setTemplates] = useState([])
+  const [activeId, setActiveId] = useState(null)
+  const [form, setForm] = useState({ ...DEFAULT_SETTINGS })
   const [saved, setSaved] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  // New-template creation state
   const [creatingNew, setCreatingNew] = useState(false)
   const [newName, setNewName] = useState('')
 
-  const refreshTemplates = () => {
-    setTemplates(getTemplates())
-    setActiveId(getActiveTemplateId())
+  useEffect(() => { loadData() }, [])
+
+  const loadData = async () => {
+    setLoading(true)
+    try {
+      const tpls = await getTemplates()
+      setTemplates(tpls)
+      const active = tpls.find(t => t.isActive)
+      if (active) {
+        setActiveId(active.id)
+        const { id, name, isActive, ...fields } = active
+        setForm({ ...DEFAULT_SETTINGS, ...fields })
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleChange = (e) => {
@@ -29,58 +42,66 @@ export const Settings = () => {
     setSaved(false)
   }
 
-  // Activate an existing template and load its fields into the form
-  const handleSelectTemplate = (tpl) => {
-    setActiveTemplate(tpl.id)
-    const { id, name, ...fields } = tpl
+  const handleSelectTemplate = async (tpl) => {
+    await setActiveTemplate(tpl.id)
+    const { id, name, isActive, ...fields } = tpl
     setForm({ ...DEFAULT_SETTINGS, ...fields })
     setActiveId(tpl.id)
     setSaved(false)
     setCreatingNew(false)
+    const tpls = await getTemplates()
+    setTemplates(tpls)
   }
 
-  // Save current form into the active template
-  const handleSave = () => {
-    saveSettings(form)
-    refreshTemplates()
+  const handleSave = async () => {
+    await saveSettings(form)
+    await loadData()
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
 
-  // Save current form as a brand-new named template
-  const handleSaveAsNew = () => {
+  const handleSaveAsNew = async () => {
     if (!newName.trim()) return
-    const id = Date.now().toString()
-    const tpl = { id, name: newName.trim(), ...form }
-    saveTemplate(tpl)
-    setActiveTemplate(id)
-    refreshTemplates()
+    const newTpl = await createTemplate({ name: newName.trim(), ...form })
+    await setActiveTemplate(newTpl.id)
+    await loadData()
     setCreatingNew(false)
     setNewName('')
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
 
-  const handleDelete = (id, e) => {
+  const handleDelete = async (id, e) => {
     e.stopPropagation()
-    if (templates.length === 1) return // don't delete the last one
-    deleteTemplate(id)
-    const remaining = getTemplates()
-    if (remaining.length > 0) {
-      handleSelectTemplate(remaining[0])
+    if (templates.length === 1) return
+    await deleteTemplate(id)
+    const remaining = await getTemplates()
+    setTemplates(remaining)
+    if (id === activeId && remaining.length > 0) {
+      await handleSelectTemplate(remaining[0])
     }
-    refreshTemplates()
   }
 
-  const handleReset = () => {
+  const handleReset = async () => {
     setForm({ ...DEFAULT_SETTINGS })
-    saveSettings({ ...DEFAULT_SETTINGS })
-    refreshTemplates()
+    await saveSettings({ ...DEFAULT_SETTINGS })
+    await loadData()
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
 
   const activeTemplate = templates.find(t => t.id === activeId)
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-2xl sm:text-4xl font-display text-dark-500 mb-1 sm:mb-2">Cilësimet</h1>
+          <p className="text-sm text-gray-400">Duke ngarkuar...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">

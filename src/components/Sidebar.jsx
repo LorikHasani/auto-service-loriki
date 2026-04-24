@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Car, Wrench, FileText, Settings,
   Archive, ClipboardList, Receipt, LogOut, Gauge, UserCog, Cog, Menu, X, SlidersHorizontal
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { getSettings } from '../utils/settings'
+import { getSettings, DEFAULT_SETTINGS } from '../utils/settings'
 
 const navigation = [
   { name: 'Paneli', to: '/', icon: LayoutDashboard },
@@ -24,7 +24,11 @@ const navigation = [
 export const Sidebar = () => {
   const { user, signOut } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const settings = getSettings()
+  const [settings, setSettings] = useState({ ...DEFAULT_SETTINGS })
+
+  useEffect(() => {
+    getSettings().then(s => setSettings(s)).catch(() => {})
+  }, [])
 
   const handleLogout = async () => {
     try { await signOut() } catch (error) { console.error('Error signing out:', error) }

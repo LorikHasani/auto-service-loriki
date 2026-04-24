@@ -1,8 +1,8 @@
 import { formatCurrency, formatDate } from './helpers'
 import { getSettings } from './settings'
 
-function getCompany() {
-  const s = getSettings()
+async function getCompany() {
+  const s = await getSettings()
   return {
     name: s.companyName,
     slogan: s.companySlogan,
@@ -79,14 +79,13 @@ function buildProductRows(items, showPrices) {
   return productRows
 }
 
-function companyHeader() {
-  const COMPANY = getCompany()
+function companyHeader(COMPANY) {
   return '<div><div class="company">' + COMPANY.name + '</div><div class="company-slogan">' + COMPANY.slogan + '</div>' +
     '<div class="company-info">' + COMPANY.address + '<br/>Tel: ' + COMPANY.phone + '</div></div>'
 }
 
-export const printOrderDocument = (order, { showPrices = true, showOrderNo = true } = {}) => {
-  const COMPANY = getCompany()
+export const printOrderDocument = async (order, { showPrices = true, showOrderNo = true } = {}) => {
+  const COMPANY = await getCompany()
   const items = order.order_items || []
   const total = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
   const productRows = buildProductRows(items, showPrices)
@@ -97,7 +96,7 @@ export const printOrderDocument = (order, { showPrices = true, showOrderNo = tru
 <style>${PRINT_STYLES}</style></head><body>
 
 <div class="header">
-  ${companyHeader()}
+  ${companyHeader(COMPANY)}
   <div class="invoice-title">
     ${showOrderNo ? '<h2>POROSI</h2><p>#' + order.id + '</p>' : '<h2>RAPORT SH\u00CBRBIMI</h2>'}
     <p>${formatDate(order.created_at)}</p>
@@ -147,8 +146,8 @@ ${showPrices ? `
   pw.print()
 }
 
-export const printDailyReport = (orders, dateLabel) => {
-  const COMPANY = getCompany()
+export const printDailyReport = async (orders, dateLabel) => {
+  const COMPANY = await getCompany()
   const calculateTotal = (order) => {
     return (order.order_items || []).reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
   }
@@ -200,7 +199,7 @@ th{padding:10px 12px;font-size:11px}
 </style></head><body>
 
 <div class="header">
-  ${companyHeader()}
+  ${companyHeader(COMPANY)}
   <div class="invoice-title">
     <h2>RAPORTI DITOR</h2>
     <p>${dateLabel}</p>

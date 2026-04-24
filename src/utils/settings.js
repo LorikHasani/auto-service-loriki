@@ -1,5 +1,4 @@
-const TEMPLATES_KEY = 'app_templates'
-const ACTIVE_KEY = 'app_active_template'
+import { supabase } from '../services/supabase'
 
 export const DEFAULT_SETTINGS = {
   companyName: 'AUTO SERVICE BASHKIMI',
@@ -9,76 +8,123 @@ export const DEFAULT_SETTINGS = {
   invoiceFooterMessage: 'Faleminderit që zgjedhët',
 }
 
+function fromDb(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    companyName: row.company_name || '',
+    companySlogan: row.company_slogan || '',
+    companyAddress: row.company_address || '',
+    companyPhone: row.company_phone || '',
+    invoiceFooterMessage: row.invoice_footer_message || '',
+    isActive: row.is_active,
+  }
+}
+
+function toDb(tpl) {
+  return {
+    name: tpl.name,
+    company_name: tpl.companyName,
+    company_slogan: tpl.companySlogan,
+    company_address: tpl.companyAddress,
+    company_phone: tpl.companyPhone,
+    invoice_footer_message: tpl.invoiceFooterMessage,
+  }
+}
+
 // ── Templates ────────────────────────────────────────────────────────────────
 
-export function getTemplates() {
-  try {
-    const stored = localStorage.getItem(TEMPLATES_KEY)
-    if (stored) return JSON.parse(stored)
-  } catch {}
-  return []
+export async function getTemplates() {
+  const { data, error } = await supabase
+    .from('invoice_templates')
+    .select('*')
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return (data || []).map(fromDb)
 }
 
-function persistTemplates(templates) {
-  localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates))
+export async function createTemplate(tpl) {
+  const { data, error } = await supabase
+    .from('invoice_templates')
+    .insert([{ ...toDb(tpl), is_active: false }])
+    .select()
+    .single()
+  if (error) throw error
+  return fromDb(data)
 }
 
-export function saveTemplate(template) {
-  // template must have { id, name, ...fields }
-  const templates = getTemplates()
-  const idx = templates.findIndex(t => t.id === template.id)
-  if (idx >= 0) templates[idx] = template
-  else templates.push(template)
-  persistTemplates(templates)
+export async function saveTemplate(tpl) {
+  const { error } = await supabase
+    .from('invoice_templates')
+    .update(toDb(tpl))
+    .eq('id', tpl.id)
+  if (error) throw error
 }
 
-export function deleteTemplate(id) {
-  const templates = getTemplates().filter(t => t.id !== id)
-  persistTemplates(templates)
-  // if deleted template was active, clear active
-  if (getActiveTemplateId() === id) {
-    localStorage.removeItem(ACTIVE_KEY)
-  }
+export async function deleteTemplate(id) {
+  const { error } = await supabase
+    .from('invoice_templates')
+    .delete()
+    .eq('id', id)
+  if (error) throw error
 }
 
 // ── Active template ───────────────────────────────────────────────────────────
 
-export function getActiveTemplateId() {
-  return localStorage.getItem(ACTIVE_KEY) || null
-}
-
-export function setActiveTemplate(id) {
-  localStorage.setItem(ACTIVE_KEY, id)
+export async function setActiveTemplate(id) {
+  await supabase.from('invoice_templates').update({ is_active: false }).neq('id', id)
+  const { error } = await supabase.from('invoice_templates').update({ is_active: true }).eq('id', id)
+  if (error) throw error
 }
 
 // ── Current settings (active template or fallback) ────────────────────────────
 
-export function getSettings() {
-  const activeId = getActiveTemplateId()
-  if (activeId) {
-    const tpl = getTemplates().find(t => t.id === activeId)
-    if (tpl) {
-      const { id, name, ...fields } = tpl
-      return { ...DEFAULT_SETTINGS, ...fields }
-    }
+export async function getSettings() {
+  const { data, error } = await supabase
+    .from('invoice_templates')
+    .select('*')
+    .eq('is_active', true)
+    .maybeSingle()
+  if (error) throw error
+  if (data) {
+    const { id, name, isActive, ...fields } = fromDb(data)
+    return { ...DEFAULT_SETTINGS, ...fields }
   }
   return { ...DEFAULT_SETTINGS }
 }
 
-export function saveSettings(settings) {
-  const activeId = getActiveTemplateId()
-  if (activeId) {
-    const templates = getTemplates()
-    const idx = templates.findIndex(t => t.id === activeId)
-    if (idx >= 0) {
-      templates[idx] = { ...templates[idx], ...settings }
-      persistTemplates(templates)
-      return
-    }
+export async function saveSettings(settings) {
+  const { data, error } = await supabase
+    .from('invoice_templates')
+    .select('id')
+    .eq('is_active', true)
+    .maybeSingle()
+  if (error) throw error
+
+  if (data) {
+    const { error: updateError } = await supabase
+      .from('invoice_templates')
+      .update({
+        company_name: settings.companyName,
+        company_slogan: settings.companySlogan,
+        company_address: settings.companyAddress,
+        company_phone: settings.companyPhone,
+        invoice_footer_message: settings.invoiceFooterMessage,
+      })
+      .eq('id', data.id)
+    if (updateError) throw updateError
+  } else {
+    const { error: insertError } = await supabase
+      .from('invoice_templates')
+      .insert([{
+        name: 'Parazgjedhja',
+        company_name: settings.companyName,
+        company_slogan: settings.companySlogan,
+        company_address: settings.companyAddress,
+        company_phone: settings.companyPhone,
+        invoice_footer_message: settings.invoiceFooterMessage,
+        is_active: true,
+      }])
+    if (insertError) throw insertError
   }
-  // No active template — just persist as a standalone "active" settings blob
-  // (legacy path, creates a template automatically)
-  const id = Date.now().toString()
-  saveTemplate({ id, name: 'Parazgjedhja', ...settings })
-  setActiveTemplate(id)
 }
