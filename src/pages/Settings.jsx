@@ -94,7 +94,7 @@ export const Settings = () => {
         <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-primary-400" />
-            <h2 className="font-semibold text-gray-800">Templates e Ruajtura</h2>
+            <h2 className="font-medium text-gray-800">Templates e Ruajtura</h2>
           </div>
           <button
             onClick={() => { setCreatingNew(true); setNewName('') }}
@@ -193,7 +193,7 @@ export const Settings = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
               <Building2 className="w-4 h-4 text-primary-400" />
-              <h2 className="font-semibold text-gray-800">Informacioni i Biznesit</h2>
+              <h2 className="font-medium text-gray-800">Informacioni i Biznesit</h2>
             </div>
             <div className="p-6 space-y-5">
               <Field label="Emri i Biznesit" name="companyName" value={form.companyName} onChange={handleChange}
@@ -241,7 +241,7 @@ export const Settings = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
               <FileText className="w-4 h-4 text-primary-400" />
-              <h2 className="font-semibold text-gray-800">Pamje paraprake e Faturës</h2>
+              <h2 className="font-medium text-gray-800">Pamje paraprake e Faturës</h2>
             </div>
             <div className="p-6">
               <div className="border border-gray-200 rounded-lg p-5 bg-gray-50">
