@@ -85,8 +85,8 @@ export const Settings = () => {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-dark-100">Cilësimet</h1>
-        <p className="text-gray-400 text-sm mt-1">Personalizo dhe menaxho templates e faturave</p>
+        <h1 className="text-2xl sm:text-4xl font-display text-dark-500 mb-1 sm:mb-2">Cilësimet</h1>
+        <p className="text-sm text-gray-600">Personalizo dhe menaxho templates e faturave</p>
       </div>
 
       {/* ── Templates list ── */}
