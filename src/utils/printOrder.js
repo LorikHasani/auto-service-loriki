@@ -1,10 +1,15 @@
 import { formatCurrency, formatDate } from './helpers'
+import { getSettings } from './settings'
 
-export const COMPANY = {
-  name: 'AUTO SERVICE BASHKIMI',
-  slogan: 'CHIPTUNING',
-  address: 'Livoq i Poshtëm, Gjilan',
-  phone: '+383 44 955 389 / 044 577 311',
+function getCompany() {
+  const s = getSettings()
+  return {
+    name: s.companyName,
+    slogan: s.companySlogan,
+    address: s.companyAddress,
+    phone: s.companyPhone,
+    footerMessage: s.invoiceFooterMessage,
+  }
 }
 
 const PRINT_STYLES = `
@@ -75,11 +80,13 @@ function buildProductRows(items, showPrices) {
 }
 
 function companyHeader() {
+  const COMPANY = getCompany()
   return '<div><div class="company">' + COMPANY.name + '</div><div class="company-slogan">' + COMPANY.slogan + '</div>' +
     '<div class="company-info">' + COMPANY.address + '<br/>Tel: ' + COMPANY.phone + '</div></div>'
 }
 
 export const printOrderDocument = (order, { showPrices = true, showOrderNo = true } = {}) => {
+  const COMPANY = getCompany()
   const items = order.order_items || []
   const total = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
   const productRows = buildProductRows(items, showPrices)
@@ -132,7 +139,7 @@ ${showPrices ? `
 </div>` : ''}
 
 <div class="footer">
-  <p>Faleminderit q\u00EB zgjedh\u00EBt ${COMPANY.name}!</p>
+  <p>${COMPANY.footerMessage} ${COMPANY.name}!</p>
   <p style="font-size:11px;margin-top:4px">${COMPANY.address} | Tel: ${COMPANY.phone}</p>
 </div>
 </body></html>`)
@@ -141,6 +148,7 @@ ${showPrices ? `
 }
 
 export const printDailyReport = (orders, dateLabel) => {
+  const COMPANY = getCompany()
   const calculateTotal = (order) => {
     return (order.order_items || []).reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
   }

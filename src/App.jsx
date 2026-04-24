@@ -13,6 +13,7 @@ import { Archive } from './pages/Archive'
 import { Logs, Invoices } from './pages/LogsAndInvoices'
 import { Employees } from './pages/Employees'
 import { ActiveServices } from './pages/ActiveServices'
+import { Settings } from './pages/Settings'
 import { Sidebar } from './components/Sidebar'
 import { Loading } from './components/Loading'
 import { PasswordGate } from './components/PasswordGate'
@@ -72,6 +73,7 @@ function AppRoutes() {
       <Route path="/archive" element={<P><PasswordGate><Archive /></PasswordGate></P>} />
       <Route path="/logs" element={<P><PasswordGate><Logs /></PasswordGate></P>} />
       <Route path="/invoices" element={<P><PasswordGate><Invoices /></PasswordGate></P>} />
+      <Route path="/settings" element={<P><Settings /></P>} />
     </Routes>
   )
 }

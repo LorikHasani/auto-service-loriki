@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { 
+import {
   LayoutDashboard, Users, Car, Wrench, FileText, Settings,
-  Archive, ClipboardList, Receipt, LogOut, Gauge, UserCog, Cog, Menu, X
+  Archive, ClipboardList, Receipt, LogOut, Gauge, UserCog, Cog, Menu, X, SlidersHorizontal
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { getSettings } from '../utils/settings'
 
 const navigation = [
   { name: 'Paneli', to: '/', icon: LayoutDashboard },
@@ -17,11 +18,13 @@ const navigation = [
   { name: 'Arkiva', to: '/archive', icon: Archive },
   { name: 'Faturat', to: '/invoices', icon: Receipt },
   { name: 'Punonjësit', to: '/employees', icon: UserCog },
+  { name: 'Cilësimet', to: '/settings', icon: SlidersHorizontal },
 ]
 
 export const Sidebar = () => {
   const { user, signOut } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const settings = getSettings()
 
   const handleLogout = async () => {
     try { await signOut() } catch (error) { console.error('Error signing out:', error) }
@@ -36,8 +39,8 @@ export const Sidebar = () => {
               <Gauge className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-[14px] font-display tracking-wider text-white leading-tight">AUTO SERVICE<br/>BASHKIMI</h1>
-              <p className="text-[9px] text-primary-400 tracking-[3px] uppercase mt-0.5">CHIPTUNING</p>
+              <h1 className="text-[14px] font-display tracking-wider text-white leading-tight">{settings.companyName}</h1>
+              <p className="text-[9px] text-primary-400 tracking-[3px] uppercase mt-0.5">{settings.companySlogan}</p>
             </div>
           </div>
           {/* Mobile close button */}
@@ -89,7 +92,7 @@ export const Sidebar = () => {
           <div className="w-8 h-8 rounded-lg bg-primary-400 flex items-center justify-center">
             <Gauge className="w-4 h-4 text-white" />
           </div>
-          <span className="text-sm font-display tracking-wider">AUTO SERVICE BASHKIMI</span>
+          <span className="text-sm font-display tracking-wider">{settings.companyName}</span>
         </div>
         <button onClick={() => setMobileOpen(true)} className="p-2 hover:bg-white/10 rounded-lg">
           <Menu className="w-5 h-5" />
