@@ -91,10 +91,10 @@ export const Settings = () => {
 
       {/* ── Templates list ── */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-primary-400" />
-            <h2 className="font-semibold text-dark-100">Templates e Ruajtura</h2>
+            <h2 className="font-semibold text-gray-800">Templates e Ruajtura</h2>
           </div>
           <button
             onClick={() => { setCreatingNew(true); setNewName('') }}
@@ -191,9 +191,9 @@ export const Settings = () => {
 
           {/* Company info */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
               <Building2 className="w-4 h-4 text-primary-400" />
-              <h2 className="font-semibold text-dark-100">Informacioni i Biznesit</h2>
+              <h2 className="font-semibold text-gray-800">Informacioni i Biznesit</h2>
             </div>
             <div className="p-6 space-y-5">
               <Field label="Emri i Biznesit" name="companyName" value={form.companyName} onChange={handleChange}
@@ -209,9 +209,9 @@ export const Settings = () => {
 
           {/* Footer message */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-primary-400" />
-              <h2 className="font-semibold text-dark-100">Mesazhi i Fundit të Faturës</h2>
+              <h2 className="font-semibold text-gray-800">Mesazhi i Fundit të Faturës</h2>
             </div>
             <div className="p-6">
               <p className="text-xs text-gray-400 mb-3">
@@ -239,9 +239,9 @@ export const Settings = () => {
 
           {/* Preview */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
               <FileText className="w-4 h-4 text-primary-400" />
-              <h2 className="font-semibold text-dark-100">Pamje paraprake e Faturës</h2>
+              <h2 className="font-semibold text-gray-800">Pamje paraprake e Faturës</h2>
             </div>
             <div className="p-6">
               <div className="border border-gray-200 rounded-lg p-5 bg-gray-50">
@@ -298,7 +298,7 @@ export const Settings = () => {
 function Field({ label, name, value, onChange, placeholder, icon }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
+      <label className="block text-sm font-semibold text-gray-800 mb-1.5">{label}</label>
       <div className="relative">
         <div className="absolute left-3 top-1/2 -translate-y-1/2">{icon}</div>
         <input
