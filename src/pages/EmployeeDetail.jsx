@@ -31,6 +31,7 @@ export const EmployeeDetail = () => {
   const [submitting, setSubmitting] = useState(false)
   const [salaryPage, setSalaryPage] = useState(1)
   const [orderPage, setOrderPage] = useState(1)
+  const [monthFilter, setMonthFilter] = useState('all')
 
   useEffect(() => {
     const fetchEmployee = async () => {
@@ -47,11 +48,29 @@ export const EmployeeDetail = () => {
     fetchEmployee()
   }, [id, navigate])
 
-  const employeeSalaries = useMemo(() => salaries.filter(s => String(s.employee_id) === String(id)), [salaries, id])
+  const allEmployeeSalaries = useMemo(() => salaries.filter(s => String(s.employee_id) === String(id)), [salaries, id])
   const employeeOrders = useMemo(() => {
     if (!employee) return []
     return orders.filter(o => o.employee_name && o.employee_name === employee.name)
   }, [orders, employee])
+
+  const MONTH_NAMES_SQ = ['Janar', 'Shkurt', 'Mars', 'Prill', 'Maj', 'Qershor', 'Korrik', 'Gusht', 'Shtator', 'Tetor', 'Nëntor', 'Dhjetor']
+  const formatMonth = (ym) => {
+    const [y, m] = ym.split('-')
+    return MONTH_NAMES_SQ[parseInt(m, 10) - 1] + ' ' + y
+  }
+
+  const availableMonths = useMemo(() => {
+    const set = new Set(allEmployeeSalaries.map(s => s.payment_date.slice(0, 7)))
+    return Array.from(set).sort().reverse()
+  }, [allEmployeeSalaries])
+
+  const employeeSalaries = useMemo(() => {
+    if (monthFilter === 'all') return allEmployeeSalaries
+    return allEmployeeSalaries.filter(s => s.payment_date.startsWith(monthFilter))
+  }, [allEmployeeSalaries, monthFilter])
+
+  useEffect(() => { setSalaryPage(1) }, [monthFilter])
 
   const totalPaid = useMemo(() => employeeSalaries.reduce((s, p) => s + parseFloat(p.amount || 0), 0), [employeeSalaries])
   const lastPayment = employeeSalaries[0] || null
@@ -133,15 +152,32 @@ export const EmployeeDetail = () => {
       </div>
 
       <Card>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h2 className="text-xl font-display text-dark-500">Historia e Rrogave</h2>
-          <Button onClick={() => handleOpenModal()} className="flex items-center gap-2" size="sm">
-            <Plus className="w-4 h-4" /> Shto Pagesë
-          </Button>
+          <div className="flex items-center gap-2">
+            {availableMonths.length > 0 && (
+              <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all text-sm bg-white">
+                <option value="all">Të gjitha muajt</option>
+                {availableMonths.map(m => <option key={m} value={m}>{formatMonth(m)}</option>)}
+              </select>
+            )}
+            <Button onClick={() => handleOpenModal()} className="flex items-center gap-2" size="sm">
+              <Plus className="w-4 h-4" /> Shto Pagesë
+            </Button>
+          </div>
         </div>
+        {monthFilter !== 'all' && (
+          <div className="mb-4 p-3 bg-primary-50 rounded-lg border border-primary-100 flex items-center justify-between">
+            <span className="text-sm text-gray-600">
+              Duke shfaqur <strong className="text-dark-500">{formatMonth(monthFilter)}</strong> — {employeeSalaries.length} pagesa
+            </span>
+            <span className="font-bold text-primary-600">{formatCurrency(totalPaid)}</span>
+          </div>
+        )}
         {employeeSalaries.length === 0 ? (
-          <EmptyState title="Nuk ka pagesa ende" description="Regjistro pagesën e parë të rrogës"
-            action={<Button onClick={() => handleOpenModal()}><Plus className="w-5 h-5 mr-2" />Shto Pagesë</Button>} />
+          <EmptyState title={monthFilter === 'all' ? "Nuk ka pagesa ende" : "Asnjë pagesë në këtë muaj"} description={monthFilter === 'all' ? "Regjistro pagesën e parë të rrogës" : "Provo një muaj tjetër"}
+            action={monthFilter === 'all' && <Button onClick={() => handleOpenModal()}><Plus className="w-5 h-5 mr-2" />Shto Pagesë</Button>} />
         ) : (
           <>
             <Table>
