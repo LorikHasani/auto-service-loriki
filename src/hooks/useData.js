@@ -131,6 +131,44 @@ export const useEmployees = () => {
   return { employees, loading, error, refetch: fetchEmployees }
 }
 
+export const useExpenses = () => {
+  const [expenses, setExpenses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const fetchExpenses = useCallback(async () => {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase.from('daily_expenses').select('*').order('expense_date', { ascending: false }).order('created_at', { ascending: false })
+      if (error) throw error
+      setExpenses(data || [])
+    } catch (err) { setError(err.message) }
+    finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { fetchExpenses() }, [fetchExpenses])
+  return { expenses, loading, error, refetch: fetchExpenses }
+}
+
+export const useSalaries = () => {
+  const [salaries, setSalaries] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const fetchSalaries = useCallback(async () => {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase.from('salary_payments').select('*, employees(name)').order('payment_date', { ascending: false }).order('created_at', { ascending: false })
+      if (error) throw error
+      setSalaries(data || [])
+    } catch (err) { setError(err.message) }
+    finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { fetchSalaries() }, [fetchSalaries])
+  return { salaries, loading, error, refetch: fetchSalaries }
+}
+
 // Helper: get local date string YYYY-MM-DD
 const getLocalDate = (ts) => {
   const d = new Date(ts)

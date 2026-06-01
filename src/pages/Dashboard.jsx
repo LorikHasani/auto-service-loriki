@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from 'react'
-import { DollarSign, TrendingUp, Package, AlertCircle, Calendar, X, Printer, Eye, EyeOff, Users, Crown } from 'lucide-react'
+import { DollarSign, TrendingUp, Package, AlertCircle, Calendar, X, Printer, Eye, EyeOff, Users, Crown, Receipt, Wallet, Wrench } from 'lucide-react'
 import { Card, StatCard } from '../components/Card'
 import { Button } from '../components/Button'
 import { Modal } from '../components/Modal'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
 import { Loading } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
-import { useOrders } from '../hooks/useData'
+import { useOrders, useExpenses, useSalaries } from '../hooks/useData'
 import { formatCurrency, formatDate, calculateOrderTotal } from '../utils/helpers'
 import { printDailyReport } from '../utils/printOrder'
 
@@ -24,11 +24,15 @@ const getLocalDate = (timestamp) => {
 export const Dashboard = () => {
   // Include archived so date filter works for past days
   const { orders: allOrders, loading: ordersLoading } = useOrders(true)
+  const { expenses: allExpenses, loading: expensesLoading } = useExpenses()
+  const { salaries: allSalaries, loading: salariesLoading } = useSalaries()
   const [dateFrom, setDateFrom] = useState(todayISO())
   const [dateTo, setDateTo] = useState(todayISO())
   const [showAll, setShowAll] = useState(false)
   const [page, setPage] = useState(1)
   const [isCOGSModalOpen, setIsCOGSModalOpen] = useState(false)
+  const [isExpensesModalOpen, setIsExpensesModalOpen] = useState(false)
+  const [isSalariesModalOpen, setIsSalariesModalOpen] = useState(false)
   const [showFinancials, setShowFinancials] = useState(false)
 
   const filteredOrders = useMemo(() => {
@@ -38,6 +42,22 @@ export const Dashboard = () => {
     if (dateTo) result = result.filter(o => getLocalDate(o.created_at) <= dateTo)
     return result
   }, [allOrders, dateFrom, dateTo, showAll])
+
+  const filteredExpenses = useMemo(() => {
+    if (showAll && !dateFrom && !dateTo) return allExpenses
+    let result = allExpenses
+    if (dateFrom) result = result.filter(e => e.expense_date >= dateFrom)
+    if (dateTo) result = result.filter(e => e.expense_date <= dateTo)
+    return result
+  }, [allExpenses, dateFrom, dateTo, showAll])
+
+  const filteredSalaries = useMemo(() => {
+    if (showAll && !dateFrom && !dateTo) return allSalaries
+    let result = allSalaries
+    if (dateFrom) result = result.filter(s => s.payment_date >= dateFrom)
+    if (dateTo) result = result.filter(s => s.payment_date <= dateTo)
+    return result
+  }, [allSalaries, dateFrom, dateTo, showAll])
 
   useEffect(() => { setPage(1) }, [dateFrom, dateTo, showAll])
 
@@ -51,8 +71,12 @@ export const Dashboard = () => {
       return acc
     }, { totalRevenue: 0, totalCOGS: 0, pendingOrders: 0 })
     c.netProfit = c.totalRevenue - c.totalCOGS
+    c.totalExpenses = filteredExpenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0)
+    c.totalSalaries = filteredSalaries.reduce((s, p) => s + parseFloat(p.amount || 0), 0)
+    c.operatingCosts = c.totalExpenses + c.totalSalaries
+    c.finalProfit = c.netProfit - c.operatingCosts
     return c
-  }, [filteredOrders])
+  }, [filteredOrders, filteredExpenses, filteredSalaries])
 
   // COGS breakdown by order
   const cogsBreakdown = useMemo(() => {
@@ -112,7 +136,7 @@ export const Dashboard = () => {
     printDailyReport(filteredOrders, label)
   }
 
-  if (ordersLoading) return <Loading />
+  if (ordersLoading || expensesLoading || salariesLoading) return <Loading />
 
   return (
     <div className="space-y-6">
@@ -166,8 +190,12 @@ export const Dashboard = () => {
         <StatCard label="Porosi" value={filteredOrders.length} icon={DollarSign} color="primary" />
         <StatCard label="Pa Paguar" value={stats.pendingOrders} icon={AlertCircle} color="danger" />
         {showFinancials && <StatCard label="Të Ardhurat" value={formatCurrency(stats.totalRevenue)} icon={DollarSign} color="primary" />}
-        {showFinancials && <StatCard label="Fitimi Neto" value={formatCurrency(stats.netProfit)} icon={TrendingUp} color="success" />}
         {showFinancials && <StatCard label="Kosto (COGS)" value={formatCurrency(stats.totalCOGS)} icon={Package} color="warning" onClick={() => setIsCOGSModalOpen(true)} />}
+        {showFinancials && <StatCard label="Fitimi Neto (pa shpenzime)" value={formatCurrency(stats.netProfit)} icon={TrendingUp} color="success" />}
+        {showFinancials && <StatCard label="Shpenzimet" value={formatCurrency(stats.totalExpenses)} icon={Receipt} color="danger" onClick={() => setIsExpensesModalOpen(true)} />}
+        {showFinancials && <StatCard label="Rrogat" value={formatCurrency(stats.totalSalaries)} icon={Wallet} color="warning" onClick={() => setIsSalariesModalOpen(true)} />}
+        {showFinancials && <StatCard label="Shpenzime + Rroga" value={formatCurrency(stats.operatingCosts)} icon={Wrench} color="danger" />}
+        {showFinancials && <StatCard label="Fitimi Final" value={formatCurrency(stats.finalProfit)} icon={TrendingUp} color={stats.finalProfit >= 0 ? 'success' : 'danger'} />}
       </div>
 
       {/* Top Clients */}
@@ -240,6 +268,56 @@ export const Dashboard = () => {
           </>
         )}
       </Card>
+
+      {/* Expenses Modal */}
+      <Modal isOpen={isExpensesModalOpen} onClose={() => setIsExpensesModalOpen(false)} title="Detajet e Shpenzimeve" size="lg">
+        <div className="space-y-4">
+          <div className="bg-red-50 rounded-lg p-4 border border-red-200 text-center">
+            <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.totalExpenses)}</div>
+            <div className="text-sm text-gray-600 mt-1">Totali i Shpenzimeve</div>
+          </div>
+          {filteredExpenses.length === 0 ? (
+            <p className="text-center text-gray-500 py-6">Nuk ka shpenzime për këtë periudhë</p>
+          ) : (
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {filteredExpenses.map((exp) => (
+                <div key={exp.id} className="flex justify-between items-center bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <div>
+                    <div className="font-medium text-dark-500">{exp.category}</div>
+                    <div className="text-xs text-gray-500">{formatDate(exp.expense_date + 'T12:00:00')} {exp.description ? '— ' + exp.description : ''}</div>
+                  </div>
+                  <span className="font-bold text-red-600">{formatCurrency(parseFloat(exp.amount))}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Salaries Modal */}
+      <Modal isOpen={isSalariesModalOpen} onClose={() => setIsSalariesModalOpen(false)} title="Detajet e Rrogave" size="lg">
+        <div className="space-y-4">
+          <div className="bg-amber-50 rounded-lg p-4 border border-amber-200 text-center">
+            <div className="text-2xl font-bold text-amber-600">{formatCurrency(stats.totalSalaries)}</div>
+            <div className="text-sm text-gray-600 mt-1">Totali i Rrogave</div>
+          </div>
+          {filteredSalaries.length === 0 ? (
+            <p className="text-center text-gray-500 py-6">Nuk ka pagesa rroge për këtë periudhë</p>
+          ) : (
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {filteredSalaries.map((sal) => (
+                <div key={sal.id} className="flex justify-between items-center bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <div>
+                    <div className="font-medium text-dark-500">{sal.employees?.name || 'N/A'}</div>
+                    <div className="text-xs text-gray-500">{formatDate(sal.payment_date + 'T12:00:00')} {sal.notes ? '— ' + sal.notes : ''}</div>
+                  </div>
+                  <span className="font-bold text-amber-600">{formatCurrency(parseFloat(sal.amount))}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
 
       {/* COGS Modal */}
       <Modal isOpen={isCOGSModalOpen} onClose={() => setIsCOGSModalOpen(false)} title="Detajet e Kostos (COGS)" size="lg">
