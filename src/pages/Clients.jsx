@@ -95,7 +95,12 @@ export const Clients = () => {
               <TableBody>
                 {paginatedClients.map((client) => (
                   <TableRow key={client.id}>
-                    <TableCell><span className="font-medium text-dark-500">{client.full_name}</span></TableCell>
+                    <TableCell>
+                      <button onClick={() => navigate('/clients/' + client.id)}
+                        className="font-medium text-dark-500 hover:text-primary-500 hover:underline transition-colors text-left">
+                        {client.full_name}
+                      </button>
+                    </TableCell>
                     <TableCell>{client.phone}</TableCell>
                     <TableCell>{client.email}</TableCell>
                     <TableCell><span className="text-gray-600">{client.address || 'N/A'}</span></TableCell>

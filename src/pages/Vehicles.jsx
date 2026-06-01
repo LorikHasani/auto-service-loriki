@@ -138,7 +138,12 @@ export const Vehicles = () => {
               <TableBody>
                 {paginatedCars.map((car) => (
                   <TableRow key={car.id}>
-                    <TableCell><span className="font-medium">{car.clients?.full_name}</span></TableCell>
+                    <TableCell>
+                      <button onClick={() => navigate('/clients/' + car.client_id)}
+                        className="font-medium text-dark-500 hover:text-primary-500 hover:underline transition-colors text-left">
+                        {car.clients?.full_name}
+                      </button>
+                    </TableCell>
                     <TableCell>{car.make}</TableCell>
                     <TableCell>{car.model}</TableCell>
                     <TableCell>{car.year}</TableCell>
