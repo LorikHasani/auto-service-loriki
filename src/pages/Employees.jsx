@@ -31,8 +31,20 @@ export const Employees = () => {
   const handleSubmit = async (e) => {
     e.preventDefault(); setSubmitting(true)
     try {
-      if (editingEmployee) { const { error } = await supabase.from('employees').update({ name: formData.name }).eq('id', editingEmployee.id); if (error) throw error }
-      else { const { error } = await supabase.from('employees').insert([{ name: formData.name }]); if (error) throw error }
+      const newName = formData.name.trim()
+      if (editingEmployee) {
+        const oldName = editingEmployee.name
+        const { error } = await supabase.from('employees').update({ name: newName }).eq('id', editingEmployee.id)
+        if (error) throw error
+        // Cascade rename to historical orders so the profile keeps the full activity history
+        if (oldName && oldName !== newName) {
+          const { error: ordersError } = await supabase.from('orders').update({ employee_name: newName }).eq('employee_name', oldName)
+          if (ordersError) throw ordersError
+        }
+      } else {
+        const { error } = await supabase.from('employees').insert([{ name: newName }])
+        if (error) throw error
+      }
       setIsModalOpen(false); setFormData({ name: '' }); setEditingEmployee(null); refetch()
     } catch (error) { alert('Gabim: ' + error.message) }
     finally { setSubmitting(false) }
