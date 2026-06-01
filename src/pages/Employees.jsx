@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Plus, Trash2, Edit2 } from 'lucide-react'
+import { Plus, Trash2, Edit2, ChevronRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
@@ -10,6 +11,7 @@ import { useEmployees } from '../hooks/useData'
 import { supabase } from '../services/supabase'
 
 export const Employees = () => {
+  const navigate = useNavigate()
   const { employees, loading, refetch } = useEmployees()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingEmployee, setEditingEmployee] = useState(null)
@@ -62,12 +64,16 @@ export const Employees = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {paginatedEmployees.map((emp) => (
-                <div key={emp.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary-400 transition-all group">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div key={emp.id} onClick={() => navigate('/employees/' + emp.id)}
+                  className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary-400 hover:bg-white hover:shadow-sm cursor-pointer transition-all group">
+                  <div className="flex items-center justify-between gap-3">
                     <span className="font-medium text-dark-500">{emp.name}</span>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleOpenModal(emp)} className="p-1 hover:bg-gray-200 rounded"><Edit2 className="w-4 h-4 text-gray-600" /></button>
-                      <button onClick={() => handleDelete(emp.id)} className="p-1 hover:bg-red-100 rounded"><Trash2 className="w-4 h-4 text-red-600" /></button>
+                    <div className="flex items-center gap-1">
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={(e) => { e.stopPropagation(); handleOpenModal(emp) }} className="p-1 hover:bg-gray-200 rounded"><Edit2 className="w-4 h-4 text-gray-600" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(emp.id) }} className="p-1 hover:bg-red-100 rounded"><Trash2 className="w-4 h-4 text-red-600" /></button>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-primary-400 transition-colors" />
                     </div>
                   </div>
                 </div>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Car, Wrench, FileText, Settings,
-  Archive, ClipboardList, Receipt, LogOut, Gauge, UserCog, Cog, Menu, X, SlidersHorizontal, Wallet
+  Archive, ClipboardList, Receipt, LogOut, Gauge, UserCog, Cog, Menu, X, SlidersHorizontal
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getSettings, DEFAULT_SETTINGS } from '../utils/settings'
@@ -19,7 +19,6 @@ const navigation = [
   { name: 'Faturat', to: '/invoices', icon: Receipt },
   { name: 'Punonjësit', to: '/employees', icon: UserCog },
   { name: 'Shpenzimet', to: '/expenses', icon: Receipt },
-  { name: 'Rrogat', to: '/salaries', icon: Wallet },
   { name: 'Cilësimet', to: '/settings', icon: SlidersHorizontal },
 ]
 

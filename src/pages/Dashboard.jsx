@@ -61,6 +61,16 @@ export const Dashboard = () => {
 
   useEffect(() => { setPage(1) }, [dateFrom, dateTo, showAll])
 
+  // Show salary-related cards only for long ranges (>= 10 days), since salaries are typically paid monthly
+  const showSalaryStats = useMemo(() => {
+    if (showAll) return true
+    if (!dateFrom || !dateTo) return true
+    const start = new Date(dateFrom + 'T00:00:00')
+    const end = new Date(dateTo + 'T00:00:00')
+    const days = Math.floor((end - start) / (24 * 3600 * 1000)) + 1
+    return days >= 10
+  }, [dateFrom, dateTo, showAll])
+
   const stats = useMemo(() => {
     const c = filteredOrders.reduce((acc, order) => {
       const items = order.order_items || []
@@ -193,9 +203,9 @@ export const Dashboard = () => {
         {showFinancials && <StatCard label="Kosto (COGS)" value={formatCurrency(stats.totalCOGS)} icon={Package} color="warning" onClick={() => setIsCOGSModalOpen(true)} />}
         {showFinancials && <StatCard label="Fitimi Neto (pa shpenzime)" value={formatCurrency(stats.netProfit)} icon={TrendingUp} color="success" />}
         {showFinancials && <StatCard label="Shpenzimet" value={formatCurrency(stats.totalExpenses)} icon={Receipt} color="danger" onClick={() => setIsExpensesModalOpen(true)} />}
-        {showFinancials && <StatCard label="Rrogat" value={formatCurrency(stats.totalSalaries)} icon={Wallet} color="warning" onClick={() => setIsSalariesModalOpen(true)} />}
-        {showFinancials && <StatCard label="Shpenzime + Rroga" value={formatCurrency(stats.operatingCosts)} icon={Wrench} color="danger" />}
-        {showFinancials && <StatCard label="Fitimi Final" value={formatCurrency(stats.finalProfit)} icon={TrendingUp} color={stats.finalProfit >= 0 ? 'success' : 'danger'} />}
+        {showFinancials && showSalaryStats && <StatCard label="Rrogat" value={formatCurrency(stats.totalSalaries)} icon={Wallet} color="warning" onClick={() => setIsSalariesModalOpen(true)} />}
+        {showFinancials && showSalaryStats && <StatCard label="Shpenzime + Rroga" value={formatCurrency(stats.operatingCosts)} icon={Wrench} color="danger" />}
+        {showFinancials && <StatCard label={showSalaryStats ? "Fitimi Final" : "Fitimi (pa rroga)"} value={formatCurrency(showSalaryStats ? stats.finalProfit : (stats.netProfit - stats.totalExpenses))} icon={TrendingUp} color={(showSalaryStats ? stats.finalProfit : stats.netProfit - stats.totalExpenses) >= 0 ? 'success' : 'danger'} />}
       </div>
 
       {/* Top Clients */}
