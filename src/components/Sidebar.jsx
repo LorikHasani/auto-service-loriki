@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Car, Wrench, FileText, Settings,
-  Archive, ClipboardList, Receipt, LogOut, Gauge, UserCog, Cog, Menu, X, SlidersHorizontal
+  Archive, ClipboardList, Receipt, LogOut, Gauge, UserCog, Cog, Menu, X, SlidersHorizontal, CalendarClock
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getSettings, DEFAULT_SETTINGS } from '../utils/settings'
@@ -11,6 +11,7 @@ const navigation = [
   { name: 'Paneli', to: '/', icon: LayoutDashboard },
   { name: 'Klientët', to: '/clients', icon: Users },
   { name: 'Automjetet', to: '/vehicles', icon: Car },
+  { name: 'Terminet', to: '/appointments', icon: CalendarClock },
   { name: 'Servisimet Aktive', to: '/active-services', icon: Cog },
   { name: 'Servisimet', to: '/orders', icon: FileText },
   { name: 'Shërbimet', to: '/services', icon: Settings },

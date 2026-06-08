@@ -15,6 +15,7 @@ import { Employees } from './pages/Employees'
 import { EmployeeDetail } from './pages/EmployeeDetail'
 import { ActiveServices } from './pages/ActiveServices'
 import { Expenses } from './pages/Expenses'
+import { Appointments } from './pages/Appointments'
 import { Settings } from './pages/Settings'
 import { Sidebar } from './components/Sidebar'
 import { Loading } from './components/Loading'
@@ -73,6 +74,7 @@ function AppRoutes() {
       <Route path="/employees/:id" element={<P><PasswordGate><EmployeeDetail /></PasswordGate></P>} />
       <Route path="/expenses" element={<P><PasswordGate><Expenses /></PasswordGate></P>} />
       <Route path="/orders" element={<P><Orders /></P>} />
+      <Route path="/appointments" element={<P><Appointments /></P>} />
       <Route path="/active-services" element={<P><ActiveServices /></P>} />
       <Route path="/archive" element={<P><PasswordGate><Archive /></PasswordGate></P>} />
       <Route path="/logs" element={<P><PasswordGate><Logs /></PasswordGate></P>} />

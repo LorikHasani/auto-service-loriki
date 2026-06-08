@@ -169,6 +169,29 @@ export const useSalaries = () => {
   return { salaries, loading, error, refetch: fetchSalaries }
 }
 
+export const useAppointments = () => {
+  const [appointments, setAppointments] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const fetchAppointments = useCallback(async () => {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*, clients(full_name, phone), cars(make, model, license_plate)')
+        .order('appointment_date', { ascending: true })
+        .order('appointment_time', { ascending: true, nullsFirst: true })
+      if (error) throw error
+      setAppointments(data || [])
+    } catch (err) { setError(err.message) }
+    finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { fetchAppointments() }, [fetchAppointments])
+  return { appointments, loading, error, refetch: fetchAppointments }
+}
+
 // Helper: get local date string YYYY-MM-DD
 const getLocalDate = (ts) => {
   const d = new Date(ts)
