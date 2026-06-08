@@ -8,18 +8,22 @@ import { useAuth } from '../context/AuthContext'
 import { getSettings, DEFAULT_SETTINGS } from '../utils/settings'
 
 const navigation = [
+  // Operacionet ditore (më të përdorurat)
   { name: 'Paneli', to: '/', icon: LayoutDashboard },
+  { name: 'Servisimet Aktive', to: '/active-services', icon: Cog },
+  { name: 'Terminet', to: '/appointments', icon: CalendarClock },
+  { name: 'Servisimet', to: '/orders', icon: FileText },
   { name: 'Klientët', to: '/clients', icon: Users },
   { name: 'Automjetet', to: '/vehicles', icon: Car },
-  { name: 'Terminet', to: '/appointments', icon: CalendarClock },
-  { name: 'Servisimet Aktive', to: '/active-services', icon: Cog },
-  { name: 'Servisimet', to: '/orders', icon: FileText },
+  // Menaxhimi
   { name: 'Shërbimet', to: '/services', icon: Settings },
-  { name: 'Raportet Ditore', to: '/logs', icon: ClipboardList },
-  { name: 'Arkiva', to: '/archive', icon: Archive },
-  { name: 'Faturat', to: '/invoices', icon: Receipt },
   { name: 'Punonjësit', to: '/employees', icon: UserCog },
   { name: 'Shpenzimet', to: '/expenses', icon: Receipt },
+  // Raportet & arkiva
+  { name: 'Raportet Ditore', to: '/logs', icon: ClipboardList },
+  { name: 'Faturat', to: '/invoices', icon: Receipt },
+  { name: 'Arkiva', to: '/archive', icon: Archive },
+  // Cilësimet
   { name: 'Cilësimet', to: '/settings', icon: SlidersHorizontal },
 ]
 
