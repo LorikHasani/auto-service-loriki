@@ -109,21 +109,19 @@ export const Appointments = () => {
     setIsModalOpen(true)
   }
 
-  const handleClientChange = (val) => {
-    const client = clients.find(c => String(c.id) === String(val))
-    setFormData(f => ({ ...f, client_id: val, car_id: '', phone: client ? (client.phone || '') : f.phone }))
-  }
+  const handleClientChange = (val) => setFormData(f => ({ ...f, client_id: val, car_id: '' }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!formData.client_id) { alert('Zgjidh klientin për terminin.'); return }
     setSubmitting(true)
     try {
       const payload = {
-        client_id: formData.client_id ? parseInt(formData.client_id) : null,
+        client_id: parseInt(formData.client_id),
         car_id: formData.car_id ? parseInt(formData.car_id) : null,
-        customer_name: formData.client_id ? null : (formData.customer_name.trim() || null),
-        phone: formData.phone.trim() || null,
-        vehicle_info: formData.car_id ? null : (formData.vehicle_info.trim() || null),
+        customer_name: null,
+        phone: null,
+        vehicle_info: null,
         appointment_date: formData.appointment_date,
         appointment_time: formData.appointment_time || null,
         service_description: formData.service_description.trim() || null,
@@ -296,43 +294,19 @@ export const Appointments = () => {
             </Select>
           </div>
 
-          <div className="border-t pt-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Klienti</p>
-            <SearchableSelect label="Klient ekzistues (opsional)" value={formData.client_id}
-              onChange={handleClientChange}
+          <div className="border-t pt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <SearchableSelect label="Klienti" value={formData.client_id}
+              onChange={handleClientChange} required
               placeholder="Kërko klientin..."
               options={clients.map(c => ({ value: c.id, label: c.full_name, sub: c.phone }))}
               onAdd={() => { setClientForm(emptyClient); setIsClientModalOpen(true) }}
               addLabel="Shto klient të ri" />
-
-            {!formData.client_id ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                <Input label="Emri i klientit" value={formData.customer_name}
-                  onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })} placeholder="p.sh., Klient i ri" />
-                <Input label="Telefoni" value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="p.sh., 044 123 456" />
-              </div>
-            ) : (
-              <div className="mt-3">
-                <Input label="Telefoni" value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="Telefoni" />
-              </div>
-            )}
-          </div>
-
-          <div className="border-t pt-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Automjeti</p>
-            {formData.client_id ? (
-              <SearchableSelect label="Automjeti i klientit (opsional)" value={formData.car_id}
-                onChange={(val) => setFormData({ ...formData, car_id: val })}
-                placeholder={clientCars.length ? "Kërko automjetin..." : "Nuk ka automjete — shto një"}
-                options={clientCars.map(c => ({ value: c.id, label: c.make + ' ' + c.model + ' (' + c.license_plate + ')' }))}
-                onAdd={() => { setCarForm(emptyCar()); setIsCarModalOpen(true) }}
-                addLabel="Shto automjet të ri" />
-            ) : (
-              <Input label="Automjeti (opsional)" value={formData.vehicle_info}
-                onChange={(e) => setFormData({ ...formData, vehicle_info: e.target.value })} placeholder="p.sh., Golf 7, Targa AA-123-BB" />
-            )}
+            <SearchableSelect label="Automjeti" value={formData.car_id}
+              onChange={(val) => setFormData({ ...formData, car_id: val })}
+              placeholder={formData.client_id ? (clientCars.length ? "Kërko automjetin..." : "Nuk ka automjete — shto një") : "Zgjidh klientin fillimisht"}
+              options={clientCars.map(c => ({ value: c.id, label: c.make + ' ' + c.model + ' (' + c.license_plate + ')' }))}
+              onAdd={formData.client_id ? () => { setCarForm(emptyCar()); setIsCarModalOpen(true) } : undefined}
+              addLabel="Shto automjet të ri" />
           </div>
 
           <div className="border-t pt-4 space-y-3">
