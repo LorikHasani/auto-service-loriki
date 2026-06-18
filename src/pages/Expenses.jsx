@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Plus, Trash2, Edit2, Calendar, X, Receipt, Fuel, UtensilsCrossed, Package2, Tag } from 'lucide-react'
+import { Plus, Trash2, Edit2, Calendar, X, Receipt, Fuel, UtensilsCrossed, Package2, Tag, Landmark, Zap } from 'lucide-react'
 import { Card, StatCard } from '../components/Card'
 import { Button } from '../components/Button'
 import { Input, Select, TextArea } from '../components/Input'
@@ -15,6 +15,8 @@ const CATEGORIES = [
   { value: 'Naftë', icon: Fuel },
   { value: 'Ushqim', icon: UtensilsCrossed },
   { value: 'Furnizime', icon: Package2 },
+  { value: 'Taksat', icon: Landmark },
+  { value: 'Rryma', icon: Zap },
   { value: 'Tjera', icon: Tag },
 ]
 
