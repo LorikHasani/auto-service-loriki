@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Plus, Printer, CheckCircle, XCircle, Trash2, Archive, X, Edit2, Eye, EyeOff } from 'lucide-react'
+import { Plus, Printer, CheckCircle, XCircle, Trash2, Archive, X, Edit2, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
@@ -13,6 +13,21 @@ import { useOrders, useClients, useCars, useServices, useEmployees } from '../ho
 import { formatCurrency, calculateOrderTotal, formatDate, formatDurationShort } from '../utils/helpers'
 import { printOrderDocument } from '../utils/printOrder'
 import { supabase } from '../services/supabase'
+
+const getLocalDate = (ts) => {
+  const d = new Date(ts)
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+}
+const todayLocal = () => getLocalDate(new Date())
+const parseLocalDate = (dateStr) => {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+const shiftDate = (dateStr, days) => {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d + days)
+  return getLocalDate(dt)
+}
 
 export const Orders = () => {
   const { orders, loading, refetch } = useOrders(false)
@@ -41,6 +56,7 @@ export const Orders = () => {
   const [submitting, setSubmitting] = useState(false)
   const [archiving, setArchiving] = useState(false)
   const [page, setPage] = useState(1)
+  const [selectedDate, setSelectedDate] = useState(todayLocal())
 
   useEffect(() => {
     if (formData.client_id) {
@@ -234,17 +250,25 @@ export const Orders = () => {
     setIsPrintModalOpen(false)
   }
 
+  // Servisimet shows a single day at a time (default: today)
+  const dayOrders = useMemo(
+    () => orders.filter(o => getLocalDate(o.created_at) === selectedDate),
+    [orders, selectedDate]
+  )
+  useEffect(() => { setPage(1) }, [selectedDate])
+
   if (loading) return <Loading />
   const orderTotals = calculateOrderTotals()
-  const { totalPages } = usePagination(orders)
-  const paginatedOrders = paginate(orders, page)
+  const { totalPages } = usePagination(dayOrders)
+  const paginatedOrders = paginate(dayOrders, page)
+  const isToday = selectedDate === todayLocal()
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl sm:text-4xl font-display text-dark-500 mb-1 sm:mb-2">Servisimet</h1>
-          <p className="text-sm text-gray-600">Servisimet aktive</p>
+          <p className="text-sm text-gray-600">Servisimet e datës {formatDate(parseLocalDate(selectedDate))}</p>
         </div>
         <div className="flex gap-2 sm:gap-3">
           <Button onClick={() => setIsArchiveModalOpen(true)} variant="secondary" className="flex items-center gap-2 text-sm"><Archive className="w-4 h-4 sm:w-5 sm:h-5" /> <span className="hidden sm:inline">Arkivo</span></Button>
@@ -253,9 +277,24 @@ export const Orders = () => {
       </div>
 
       <Card>
-        {orders.length === 0 ? (
-          <EmptyState title="Nuk ka servisime aktive" description="Krijo servisimin e parë"
-            action={<Button onClick={openCreateModal}><Plus className="w-5 h-5 mr-2" />Krijo Servisim</Button>} />
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <Button size="sm" variant="outline" onClick={() => setSelectedDate(shiftDate(selectedDate, -1))} title="Dita e kaluar">
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value || todayLocal())}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm" />
+          <Button size="sm" variant="outline" onClick={() => setSelectedDate(shiftDate(selectedDate, 1))} title="Dita e ardhshme">
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+          {!isToday && (
+            <Button size="sm" variant="secondary" onClick={() => setSelectedDate(todayLocal())}>Sot</Button>
+          )}
+          <span className="text-sm text-gray-500 ml-auto">{dayOrders.length} servisime</span>
+        </div>
+        {dayOrders.length === 0 ? (
+          <EmptyState title={isToday ? "Nuk ka servisime sot" : "Nuk ka servisime në këtë datë"}
+            description={isToday ? "Krijo servisimin e parë" : "Zgjidh një datë tjetër"}
+            action={isToday ? <Button onClick={openCreateModal}><Plus className="w-5 h-5 mr-2" />Krijo Servisim</Button> : undefined} />
         ) : (
           <>
           <Table>
@@ -328,7 +367,7 @@ export const Orders = () => {
               )})}
             </TableBody>
           </Table>
-          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={orders.length} />
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={dayOrders.length} />
           </>
         )}
       </Card>
