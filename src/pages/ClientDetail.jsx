@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Car, Phone, Mail, MapPin, Printer, Calendar, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, Car, Phone, Mail, MapPin, Printer, Calendar, Eye, Wrench, FileText, ExternalLink } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Modal } from '../components/Modal'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
 import { Loading, EmptyState } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
+import { VehicleLink } from '../components/EntityLink'
+import { OrderDetailContent } from '../components/OrderDetail'
 import { formatCurrency, calculateOrderTotal, formatDate, formatDurationShort } from '../utils/helpers'
-import { printOrderDocument } from '../utils/printOrder'
+import { printOrderDocument, printServiceHistory } from '../utils/printOrder'
 import { supabase } from '../services/supabase'
 
 export const ClientDetail = () => {
@@ -28,7 +30,8 @@ export const ClientDetail = () => {
   const [printShowOrderNo, setPrintShowOrderNo] = useState(true)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [detailOrder, setDetailOrder] = useState(null)
-  const [showDetailPrices, setShowDetailPrices] = useState(false)
+  const [isHistoryPrintOpen, setIsHistoryPrintOpen] = useState(false)
+  const [historyShowPrices, setHistoryShowPrices] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,6 +86,14 @@ export const ClientDetail = () => {
     setIsPrintModalOpen(false)
   }
 
+  const executeHistoryPrint = () => {
+    const car = selectedCarId !== 'all' ? clientCars.find(c => String(c.id) === String(selectedCarId)) : null
+    printServiceHistory(filteredOrders, { client, car, showPrices: historyShowPrices })
+    setIsHistoryPrintOpen(false)
+  }
+
+  const handleNewService = (car) => navigate('/orders', { state: { prefillCar: car } })
+
   if (loading) return <Loading />
   if (!client) return null
 
@@ -90,12 +101,19 @@ export const ClientDetail = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" onClick={() => navigate('/clients')} className="flex items-center gap-2"><ArrowLeft className="w-4 h-4" /> Kthehu</Button>
-        <div>
-          <h1 className="text-2xl sm:text-4xl font-display text-dark-500">{client.full_name}</h1>
-          <p className="text-gray-600">Detajet e klientit dhe historia e porosive</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" onClick={() => navigate('/clients')} className="flex items-center gap-2"><ArrowLeft className="w-4 h-4" /> Kthehu</Button>
+          <div>
+            <h1 className="text-2xl sm:text-4xl font-display text-dark-500">{client.full_name}</h1>
+            <p className="text-gray-600">Detajet e klientit dhe historia e porosive</p>
+          </div>
         </div>
+        {filteredOrders.length > 0 && (
+          <Button variant="secondary" onClick={() => { setHistoryShowPrices(true); setIsHistoryPrintOpen(true) }} className="flex items-center gap-2">
+            <FileText className="w-4 h-4" /> Printo Të Gjitha Shërbimet
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -138,12 +156,23 @@ export const ClientDetail = () => {
             </button>
             {clientCars.map(car => {
               const cnt = orders.filter(o => o.car_id === car.id).length
+              const active = String(selectedCarId) === String(car.id)
               return (
-                <button key={car.id} onClick={() => setSelectedCarId(String(car.id))}
-                  className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${String(selectedCarId) === String(car.id) ? 'bg-primary-400 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                  <Car className="w-4 h-4" /> {car.make} {car.model} <span className="text-xs opacity-75">({car.license_plate})</span>
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${String(selectedCarId) === String(car.id) ? 'bg-white/20' : 'bg-gray-200'}`}>{cnt}</span>
-                </button>
+                <div key={car.id} className={`flex items-stretch rounded-lg overflow-hidden transition-all ${active ? 'bg-primary-400 text-white shadow-md' : 'bg-gray-100 text-gray-600'}`}>
+                  <button onClick={() => setSelectedCarId(String(car.id))}
+                    className={`px-4 py-2.5 text-sm font-medium flex items-center gap-2 transition-colors ${active ? '' : 'hover:bg-gray-200'}`}>
+                    <Car className="w-4 h-4" /> {car.make} {car.model} <span className="text-xs opacity-75">({car.license_plate})</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${active ? 'bg-white/20' : 'bg-gray-200'}`}>{cnt}</span>
+                  </button>
+                  <button onClick={() => handleNewService(car)} title="Shto servisim për këtë automjet"
+                    className={`px-2.5 flex items-center border-l transition-colors ${active ? 'border-white/25 hover:bg-primary-500' : 'border-gray-200 hover:bg-gray-200'}`}>
+                    <Wrench className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => navigate('/vehicles/' + car.id)} title="Shiko automjetin"
+                    className={`px-2.5 flex items-center border-l transition-colors ${active ? 'border-white/25 hover:bg-primary-500' : 'border-gray-200 hover:bg-gray-200'}`}>
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
+                </div>
               )
             })}
           </div>
@@ -154,6 +183,10 @@ export const ClientDetail = () => {
                 <div><span className="text-gray-500 text-xs">Viti</span><p className="font-medium">{selectedCar.year}</p></div>
                 <div><span className="text-gray-500 text-xs">Targa</span><p className="font-mono font-medium">{selectedCar.license_plate}</p></div>
                 <div><span className="text-gray-500 text-xs">VIN</span><p className="font-mono font-medium text-xs">{selectedCar.vin || 'N/A'}</p></div>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-200">
+                <Button size="sm" onClick={() => handleNewService(selectedCar)} className="flex items-center gap-2"><Wrench className="w-4 h-4" /> Shto Servisim</Button>
+                <Button size="sm" variant="outline" onClick={() => navigate('/vehicles/' + selectedCar.id)} className="flex items-center gap-2"><ExternalLink className="w-4 h-4" /> Shiko Automjetin</Button>
               </div>
             </div>
           )}
@@ -188,7 +221,7 @@ export const ClientDetail = () => {
                 {paginatedOrders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell><span className="font-mono font-semibold">#{order.id}</span></TableCell>
-                    <TableCell><span className="text-sm">{order.cars?.make} {order.cars?.model}<span className="block text-xs text-gray-400">{order.cars?.license_plate}</span></span></TableCell>
+                    <TableCell><VehicleLink id={order.car_id} car={order.cars} className="text-sm" /></TableCell>
                     <TableCell><span className="text-sm">{order.km ? Number(order.km).toLocaleString() + ' km' : '\u2014'}</span></TableCell>
                     <TableCell><div className="text-sm text-gray-600">{order.order_items?.map((item, idx) => <div key={idx}>• {item.service_name}</div>)}</div></TableCell>
                     <TableCell><span className="font-semibold">{formatCurrency(calculateOrderTotal(order))}</span></TableCell>
@@ -243,90 +276,29 @@ export const ClientDetail = () => {
         </div>
       </Modal>
 
+      {/* Print All Services Modal */}
+      <Modal isOpen={isHistoryPrintOpen} onClose={() => setIsHistoryPrintOpen(false)} title="Printo Të Gjitha Shërbimet" size="sm">
+        <div className="space-y-5">
+          <div className="bg-gray-50 rounded-lg p-4 text-sm">
+            <p><strong>Klienti:</strong> {client.full_name}</p>
+            <p><strong>Automjeti:</strong> {selectedCar ? selectedCar.make + ' ' + selectedCar.model + ' (' + selectedCar.license_plate + ')' : 'Të gjitha'}</p>
+            <p><strong>Servisime:</strong> {filteredOrders.length}</p>
+          </div>
+          <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+            <input type="checkbox" checked={historyShowPrices} onChange={(e) => setHistoryShowPrices(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-primary-400 focus:ring-primary-400" />
+            <div><span className="font-medium text-sm">Shfaq çmimet</span><p className="text-xs text-gray-500">Totali për secilin servisim dhe shuma totale</p></div>
+          </label>
+          <div className="flex gap-3 justify-end pt-3 border-t">
+            <Button variant="outline" onClick={() => setIsHistoryPrintOpen(false)}>Anulo</Button>
+            <Button onClick={executeHistoryPrint} className="flex items-center gap-2"><Printer className="w-4 h-4" /> Printo</Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Detail Modal */}
-      <Modal isOpen={isDetailModalOpen} onClose={() => { setIsDetailModalOpen(false); setShowDetailPrices(false) }} title={detailOrder ? 'Detajet — Servisimi #' + detailOrder.id : ''} size="lg">
-        {detailOrder && (() => {
-          const items = detailOrder.order_items || []
-          const total = items.reduce((s, i) => s + (i.quantity * i.unit_price), 0)
-          const totalCost = items.reduce((s, i) => s + (parseFloat(i.parts_cost) || 0), 0)
-          return (
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Automjeti</p>
-                  <p className="font-bold text-dark-500">{detailOrder.cars?.make} {detailOrder.cars?.model}</p>
-                  <p className="text-sm text-gray-600">Targa: {detailOrder.cars?.license_plate}</p>
-                  {detailOrder.cars?.vin && <p className="text-sm text-gray-600">VIN: {detailOrder.cars?.vin}</p>}
-                  {detailOrder.km && <p className="text-sm text-gray-600">Km: {Number(detailOrder.km).toLocaleString()}</p>}
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 uppercase">Data</p>
-                    <p className="font-semibold text-sm">{formatDate(detailOrder.created_at)}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 uppercase">Punonjësi</p>
-                    <p className="font-semibold text-sm">{detailOrder.employee_name || '—'}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 uppercase">Kohëzgjatja</p>
-                    <p className="font-semibold text-sm">{formatDurationShort(detailOrder.service_duration)}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 uppercase">Pagesa</p>
-                    <Badge variant={detailOrder.is_paid ? 'success' : 'danger'}>{detailOrder.is_paid ? 'Paguar' : 'Pa paguar'}</Badge>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Shërbimet & Pjesët</p>
-                <div className="space-y-3">
-                  {items.map((item, idx) => {
-                    const parts = item.parts_json || []
-                    const laborCost = parseFloat(item.labor_cost) || 0
-                    return (
-                      <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                        <div className="flex justify-between items-start">
-                          <p className="font-bold text-dark-500">{item.service_name}</p>
-                          {showDetailPrices && <p className="font-bold text-primary-500">{formatCurrency(item.unit_price)}</p>}
-                        </div>
-                        {showDetailPrices && laborCost > 0 && <p className="text-sm text-gray-600 mt-1">Puna: {formatCurrency(laborCost)}</p>}
-                        {parts.length > 0 && (
-                          <div className="mt-2 space-y-1">
-                            {parts.filter(p => p.name).map((p, pi) => (
-                              <div key={pi} className="flex justify-between text-sm text-gray-600 pl-3 border-l-2 border-gray-300">
-                                <span>{p.name} {p.quantity > 1 ? '×' + p.quantity : ''}</span>
-                                {showDetailPrices && <span>{(parseFloat(p.buy_price) || 0) > 0 && <span className="text-red-500 text-xs mr-1">(-€{((parseFloat(p.buy_price) || 0) * (p.quantity || 1)).toFixed(2)})</span>}{formatCurrency((p.sell_price || 0) * (p.quantity || 1))}</span>}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-              <div className="bg-primary-50 rounded-lg p-4 space-y-2">
-                <div className="flex justify-between items-center">
-                  <div className="flex justify-between flex-1 text-xl font-bold"><span>TOTALI:</span><span className="text-primary-600">{formatCurrency(total)}</span></div>
-                  <button onClick={() => setShowDetailPrices(!showDetailPrices)}
-                    className={`ml-3 p-2 rounded-lg transition-colors ${showDetailPrices ? 'bg-primary-200 text-primary-600' : 'bg-gray-200 text-gray-400'}`}>
-                    {showDetailPrices ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </button>
-                </div>
-                {showDetailPrices && (
-                  <>
-                    <div className="flex justify-between text-sm border-t pt-2"><span className="text-gray-600">Kosto Pjesëve:</span><span className="font-semibold text-red-600">-{formatCurrency(totalCost)}</span></div>
-                    <div className="flex justify-between text-xl font-bold"><span>FITIMI:</span><span className={total - totalCost >= 0 ? 'text-green-600' : 'text-red-600'}>{formatCurrency(total - totalCost)}</span></div>
-                  </>
-                )}
-                <div className="flex justify-start pt-2 border-t">
-                  <Badge variant={detailOrder.is_paid ? 'success' : 'danger'}>{detailOrder.is_paid ? 'Paguar' : 'Pa paguar'}</Badge>
-                </div>
-              </div>
-            </div>
-          )
-        })()}
+      <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} title={detailOrder ? 'Detajet — Servisimi #' + detailOrder.id : ''} size="lg">
+        {detailOrder && <OrderDetailContent order={detailOrder} showClient={false} />}
       </Modal>
     </div>
   )

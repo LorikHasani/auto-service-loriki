@@ -5,6 +5,7 @@ import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { Modal } from '../components/Modal'
 import { SearchableSelect } from '../components/SearchableSelect'
+import { ClientLink, VehicleLink } from '../components/EntityLink'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
 import { Loading, EmptyState } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
@@ -242,12 +243,8 @@ export const Archive = () => {
                 {paginatedOrders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell><span className="font-mono font-semibold">#{order.id}</span></TableCell>
-                    <TableCell><span className="font-medium">{order.clients?.full_name}</span></TableCell>
-                    <TableCell>
-                      <span className="text-sm">{order.cars?.make} {order.cars?.model}
-                        <span className="block text-xs text-gray-400">{order.cars?.license_plate}</span>
-                      </span>
-                    </TableCell>
+                    <TableCell><ClientLink id={order.client_id} name={order.clients?.full_name} className="font-medium" /></TableCell>
+                    <TableCell><VehicleLink id={order.car_id} car={order.cars} className="text-sm" /></TableCell>
                     <TableCell>
                       <div className="text-sm text-gray-600">{order.order_items?.map((item, idx) => <div key={idx}>• {item.service_name}</div>)}</div>
                     </TableCell>
@@ -401,13 +398,13 @@ export const Archive = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Klienti</p>
-                  <p className="font-bold text-dark-500">{detailOrder.clients?.full_name}</p>
+                  <ClientLink id={detailOrder.client_id} name={detailOrder.clients?.full_name} className="font-bold text-dark-500" />
                   <p className="text-sm text-gray-600">{detailOrder.clients?.phone}</p>
                   {detailOrder.clients?.email && <p className="text-sm text-gray-600">{detailOrder.clients?.email}</p>}
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Automjeti</p>
-                  <p className="font-bold text-dark-500">{detailOrder.cars?.make} {detailOrder.cars?.model}</p>
+                  <VehicleLink id={detailOrder.car_id} car={detailOrder.cars} showPlate={false} className="font-bold text-dark-500" />
                   <p className="text-sm text-gray-600">Targa: {detailOrder.cars?.license_plate}</p>
                   {detailOrder.cars?.vin && <p className="text-sm text-gray-600">VIN: {detailOrder.cars?.vin}</p>}
                   {detailOrder.km && <p className="text-sm text-gray-600">Km: {Number(detailOrder.km).toLocaleString()}</p>}

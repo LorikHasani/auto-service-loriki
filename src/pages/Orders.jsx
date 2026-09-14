@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Plus, Printer, CheckCircle, XCircle, Trash2, Archive, X, Edit2, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Printer, CheckCircle, XCircle, Trash2, Archive, X, Edit2, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
@@ -9,6 +9,8 @@ import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Ba
 import { Loading, EmptyState } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
 import { SearchableSelect } from '../components/SearchableSelect'
+import { ClientLink, VehicleLink } from '../components/EntityLink'
+import { OrderDetailContent } from '../components/OrderDetail'
 import { useOrders, useClients, useCars, useServices, useEmployees } from '../hooks/useData'
 import { formatCurrency, calculateOrderTotal, formatDate, formatDurationShort } from '../utils/helpers'
 import { printOrderDocument } from '../utils/printOrder'
@@ -41,7 +43,6 @@ export const Orders = () => {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [detailOrder, setDetailOrder] = useState(null)
-  const [showDetailPrices, setShowDetailPrices] = useState(false)
   const [printOrderData, setPrintOrderData] = useState(null)
   const [printShowPrices, setPrintShowPrices] = useState(true)
   const [printShowInvoiceNo, setPrintShowInvoiceNo] = useState(true)
@@ -317,13 +318,8 @@ export const Orders = () => {
                 return (
                 <TableRow key={order.id}>
                   <TableCell><span className="font-mono font-semibold">#{order.id}</span></TableCell>
-                  <TableCell><span className="font-medium">{order.clients?.full_name}</span></TableCell>
-                  <TableCell>
-                    <span className="text-sm text-gray-600">
-                      {order.cars?.make} {order.cars?.model}
-                      <span className="block text-xs text-gray-400">{order.cars?.license_plate}</span>
-                    </span>
-                  </TableCell>
+                  <TableCell><ClientLink id={order.client_id} name={order.clients?.full_name} className="font-medium" /></TableCell>
+                  <TableCell><VehicleLink id={order.car_id} car={order.cars} className="text-sm text-gray-600" /></TableCell>
                   <TableCell><span className="text-sm">{order.km ? Number(order.km).toLocaleString() : '\u2014'}</span></TableCell>
                   <TableCell><span className="text-sm text-gray-600">{order.employee_name || '\u2014'}</span></TableCell>
                   <TableCell>
@@ -524,94 +520,8 @@ export const Orders = () => {
       </Modal>
 
       {/* Detail Modal */}
-      <Modal isOpen={isDetailModalOpen} onClose={() => { setIsDetailModalOpen(false); setShowDetailPrices(false) }} title={detailOrder ? 'Detajet — Servisimi #' + detailOrder.id : ''} size="lg">
-        {detailOrder && (() => {
-          const items = detailOrder.order_items || []
-          const total = items.reduce((s, i) => s + (i.quantity * i.unit_price), 0)
-          const totalCost = items.reduce((s, i) => s + (parseFloat(i.parts_cost) || 0), 0)
-          return (
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Klienti</p>
-                  <p className="font-bold text-dark-500">{detailOrder.clients?.full_name}</p>
-                  <p className="text-sm text-gray-600">{detailOrder.clients?.phone}</p>
-                  {detailOrder.clients?.email && <p className="text-sm text-gray-600">{detailOrder.clients?.email}</p>}
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Automjeti</p>
-                  <p className="font-bold text-dark-500">{detailOrder.cars?.make} {detailOrder.cars?.model}</p>
-                  <p className="text-sm text-gray-600">Targa: {detailOrder.cars?.license_plate}</p>
-                  {detailOrder.cars?.vin && <p className="text-sm text-gray-600">VIN: {detailOrder.cars?.vin}</p>}
-                  {detailOrder.km && <p className="text-sm text-gray-600">Km: {Number(detailOrder.km).toLocaleString()}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 uppercase">Data</p>
-                  <p className="font-semibold text-sm">{formatDate(detailOrder.created_at)}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 uppercase">Punonjësi</p>
-                  <p className="font-semibold text-sm">{detailOrder.employee_name || '—'}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 uppercase">Kohëzgjatja</p>
-                  <p className="font-semibold text-sm">{formatDurationShort(detailOrder.service_duration)}</p>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Shërbimet & Pjesët</p>
-                <div className="space-y-3">
-                  {items.map((item, idx) => {
-                    const parts = item.parts_json || []
-                    const laborCost = parseFloat(item.labor_cost) || 0
-                    return (
-                      <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                        <div className="flex justify-between items-start">
-                          <p className="font-bold text-dark-500">{item.service_name}</p>
-                          {showDetailPrices && <p className="font-bold text-primary-500">{formatCurrency(item.unit_price)}</p>}
-                        </div>
-                        {showDetailPrices && laborCost > 0 && <p className="text-sm text-gray-600 mt-1">Puna: {formatCurrency(laborCost)}</p>}
-                        {parts.length > 0 && (
-                          <div className="mt-2 space-y-1">
-                            {parts.filter(p => p.name).map((p, pi) => (
-                              <div key={pi} className="flex justify-between text-sm text-gray-600 pl-3 border-l-2 border-gray-300">
-                                <span>{p.name} {p.quantity > 1 ? '×' + p.quantity : ''}</span>
-                                {showDetailPrices && <span>{(parseFloat(p.buy_price) || 0) > 0 && <span className="text-red-500 text-xs mr-1">(-€{((parseFloat(p.buy_price) || 0) * (p.quantity || 1)).toFixed(2)})</span>}{formatCurrency((p.sell_price || 0) * (p.quantity || 1))}</span>}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="bg-primary-50 rounded-lg p-4 space-y-2">
-                <div className="flex justify-between items-center">
-                  <div className="flex justify-between flex-1 text-xl font-bold"><span>TOTALI:</span><span className="text-primary-600">{formatCurrency(total)}</span></div>
-                  <button onClick={() => setShowDetailPrices(!showDetailPrices)}
-                    className={`ml-3 p-2 rounded-lg transition-colors ${showDetailPrices ? 'bg-primary-200 text-primary-600' : 'bg-gray-200 text-gray-400'}`}>
-                    {showDetailPrices ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </button>
-                </div>
-                {showDetailPrices && (
-                  <>
-                    <div className="flex justify-between text-sm border-t pt-2"><span className="text-gray-600">Kosto Pjesëve:</span><span className="font-semibold text-red-600">-{formatCurrency(totalCost)}</span></div>
-                    <div className="flex justify-between text-xl font-bold"><span>FITIMI:</span><span className={total - totalCost >= 0 ? 'text-green-600' : 'text-red-600'}>{formatCurrency(total - totalCost)}</span></div>
-                  </>
-                )}
-                <div className="flex justify-start pt-2 border-t">
-                  <Badge variant={detailOrder.is_paid ? 'success' : 'danger'}>{detailOrder.is_paid ? 'Paguar' : 'Pa paguar'}</Badge>
-                </div>
-              </div>
-            </div>
-          )
-        })()}
+      <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} title={detailOrder ? 'Detajet — Servisimi #' + detailOrder.id : ''} size="lg">
+        {detailOrder && <OrderDetailContent order={detailOrder} />}
       </Modal>
     </div>
   )

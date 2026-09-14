@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Plus, Trash2, Edit2, Search, Wrench, Clock } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
@@ -9,6 +9,7 @@ import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } f
 import { Loading, EmptyState } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
 import { SearchableSelect } from '../components/SearchableSelect'
+import { ClientLink } from '../components/EntityLink'
 import { useCars, useClients } from '../hooks/useData'
 import { supabase } from '../services/supabase'
 
@@ -93,7 +94,7 @@ export const Vehicles = () => {
   }
 
   const handleViewHistory = (car) => {
-    navigate('/clients/' + car.client_id)
+    navigate('/vehicles/' + car.id)
   }
 
   if (loading) return <Loading />
@@ -139,13 +140,10 @@ export const Vehicles = () => {
                 {paginatedCars.map((car) => (
                   <TableRow key={car.id}>
                     <TableCell>
-                      <button onClick={() => navigate('/clients/' + car.client_id)}
-                        className="font-medium text-dark-500 hover:text-primary-500 hover:underline transition-colors text-left">
-                        {car.clients?.full_name}
-                      </button>
+                      <ClientLink id={car.client_id} name={car.clients?.full_name} className="font-medium text-dark-500" />
                     </TableCell>
-                    <TableCell>{car.make}</TableCell>
-                    <TableCell>{car.model}</TableCell>
+                    <TableCell><Link to={'/vehicles/' + car.id} className="font-medium text-dark-500 hover:text-primary-500 hover:underline transition-colors" title="Shiko automjetin">{car.make}</Link></TableCell>
+                    <TableCell><Link to={'/vehicles/' + car.id} className="hover:text-primary-500 hover:underline transition-colors" title="Shiko automjetin">{car.model}</Link></TableCell>
                     <TableCell>{car.year}</TableCell>
                     <TableCell><span className="font-mono font-medium">{car.license_plate}</span></TableCell>
                     <TableCell><span className="text-gray-600 text-sm font-mono">{car.vin || 'N/A'}</span></TableCell>

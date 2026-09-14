@@ -6,6 +6,7 @@ import { Modal } from '../components/Modal'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
 import { Loading, EmptyState } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
+import { ClientLink, VehicleLink } from '../components/EntityLink'
 import { useLogs, useOrders } from '../hooks/useData'
 import { formatDate, formatCurrency, calculateOrderTotal } from '../utils/helpers'
 import { printOrderDocument, printDailyReport } from '../utils/printOrder'
@@ -248,14 +249,14 @@ export const Logs = () => {
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <span className="font-mono font-semibold text-sm">#{order.id}</span>
-                          <span className="ml-2 font-medium">{order.clients?.full_name}</span>
+                          <ClientLink id={order.client_id} name={order.clients?.full_name} className="ml-2 font-medium" />
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant={order.is_paid ? 'success' : 'danger'}>{order.is_paid ? 'Paguar' : 'Pa paguar'}</Badge>
                         </div>
                       </div>
                       <div className="text-sm text-gray-600 mb-1">
-                        {order.cars?.make} {order.cars?.model} — <span className="font-mono">{order.cars?.license_plate}</span>
+                        <VehicleLink id={order.car_id} car={order.cars} showPlate={false} /> — <span className="font-mono">{order.cars?.license_plate}</span>
                       </div>
                       <div className="space-y-1 mt-2">
                         {items.map((item, idx) => (
@@ -388,10 +389,8 @@ export const Invoices = () => {
                 {paginatedOrders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell><span className="font-mono font-semibold text-primary-500">FAT-{order.id}</span></TableCell>
-                    <TableCell><span className="font-medium">{order.clients?.full_name}</span></TableCell>
-                    <TableCell>
-                      <span className="text-sm">{order.cars?.make} {order.cars?.model}<span className="block text-xs text-gray-500">{order.cars?.license_plate}</span></span>
-                    </TableCell>
+                    <TableCell><ClientLink id={order.client_id} name={order.clients?.full_name} className="font-medium" /></TableCell>
+                    <TableCell><VehicleLink id={order.car_id} car={order.cars} className="text-sm" /></TableCell>
                     <TableCell><span className="text-xs font-mono text-gray-500">{order.cars?.vin || '\u2014'}</span></TableCell>
                     <TableCell><span className="text-sm text-gray-600">{formatDate(order.created_at)}</span></TableCell>
                     <TableCell><span className="font-semibold">{formatCurrency(calculateOrderTotal(order))}</span></TableCell>

@@ -247,3 +247,107 @@ th{padding:10px 12px;font-size:11px}
   pw.document.close()
   pw.print()
 }
+
+export const printServiceHistory = async (orders, { client, car, showPrices = true } = {}) => {
+  const COMPANY = await getCompany()
+  const calculateTotal = (order) => (order.order_items || []).reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
+
+  const sorted = [...orders].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+  const grandTotal = sorted.reduce((sum, o) => sum + calculateTotal(o), 0)
+  const paidTotal = sorted.filter(o => o.is_paid).reduce((sum, o) => sum + calculateTotal(o), 0)
+  const unpaidTotal = grandTotal - paidTotal
+  const todayStr = formatDate(new Date())
+
+  const firstDate = sorted.length > 0 ? formatDate(sorted[0].created_at) : '—'
+  const lastDate = sorted.length > 0 ? formatDate(sorted[sorted.length - 1].created_at) : '—'
+
+  let orderRows = ''
+  sorted.forEach((order, idx) => {
+    const items = order.order_items || []
+    let servicesHtml = ''
+    items.forEach(item => {
+      servicesHtml += '<div style="margin-bottom:3px"><strong>' + item.service_name + '</strong>'
+      const parts = (item.parts_json || []).filter(p => p.name)
+      if (parts.length > 0) {
+        const partNames = parts.map(p => p.name + (p.quantity > 1 ? ' (' + p.quantity + 'x)' : ''))
+        servicesHtml += '<span style="color:#888;font-size:10px;display:block;margin-left:6px">' + partNames.join(', ') + '</span>'
+      } else if (item.description) {
+        servicesHtml += '<span style="color:#888;font-size:10px;display:block;margin-left:6px">' + item.description + '</span>'
+      }
+      servicesHtml += '</div>'
+    })
+    orderRows += '<tr>' +
+      '<td>' + (idx + 1) + '</td>' +
+      '<td><strong>#' + order.id + '</strong></td>' +
+      '<td>' + formatDate(order.created_at) + '</td>' +
+      (car ? '' : '<td>' + (order.cars?.make || '') + ' ' + (order.cars?.model || '') +
+        '<span style="font-size:11px;color:#888;display:block">' + (order.cars?.license_plate || '') + '</span></td>') +
+      '<td style="text-align:right">' + (order.km ? Number(order.km).toLocaleString() + ' km' : '—') + '</td>' +
+      '<td style="font-size:11px;color:#555;max-width:260px;line-height:1.3">' + servicesHtml + '</td>' +
+      (showPrices ? '<td style="text-align:right"><strong>' + formatCurrency(calculateTotal(order)) + '</strong></td>' : '') +
+      '<td style="text-align:center"><span class="status-badge ' + (order.is_paid ? 'status-paid' : 'status-unpaid') + '">' + (order.is_paid ? 'Paguar' : 'Pa paguar') + '</span></td>' +
+      '</tr>'
+  })
+
+  const carLabel = car ? (car.make || '') + ' ' + (car.model || '') + ' (' + (car.license_plate || '') + ')' : ''
+
+  const pw = window.open('', '', 'height=700,width=900')
+  pw.document.write(`<html><head><title>Historia e Shërbimeve - ${client?.full_name || carLabel}</title>
+<style>${PRINT_STYLES}
+td{padding:8px 12px;font-size:13px}
+th{padding:10px 12px;font-size:11px}
+</style></head><body>
+
+<div class="header">
+  ${companyHeader(COMPANY)}
+  <div class="invoice-title">
+    <h2>HISTORIA E SHËRBIMEVE</h2>
+    <p>${sorted.length} servisime</p>
+  </div>
+</div>
+
+<p class="date-line"><strong>Data e printimit:</strong> ${todayStr}</p>
+
+<div class="info-grid">
+  <div class="info-box">
+    <h3>Klienti</h3>
+    <p><strong>${client?.full_name || '—'}</strong></p>
+    <p>${client?.phone || ''}</p>
+    <p>${client?.email || ''}</p>
+    ${client?.address ? '<p>' + client.address + '</p>' : ''}
+  </div>
+  <div class="info-box">
+    <h3>${car ? 'Automjeti' : 'Përmbledhje'}</h3>
+    ${car
+      ? '<p><strong>' + (car.make || '') + ' ' + (car.model || '') + '</strong></p>' +
+        '<p><span class="label">Targa:</span> ' + (car.license_plate || '') + '</p>' +
+        (car.vin ? '<p><span class="label">VIN:</span> ' + car.vin + '</p>' : '') +
+        (car.year ? '<p><span class="label">Viti:</span> ' + car.year + '</p>' : '')
+      : '<p><span class="label">Automjete:</span> të gjitha</p>'}
+    <p><span class="label">Periudha:</span> ${firstDate} — ${lastDate}</p>
+  </div>
+</div>
+
+<table>
+  <thead><tr>
+    <th>#</th><th>ID</th><th>Data</th>${car ? '' : '<th>Automjeti</th>'}<th style="text-align:right">Km</th><th>Shërbimet</th>
+    ${showPrices ? '<th style="text-align:right">Totali</th>' : ''}<th style="text-align:center">Pagesa</th>
+  </tr></thead>
+  <tbody>${orderRows}</tbody>
+</table>
+
+${showPrices ? `
+<div class="total-section">
+  <div class="total-row"><span>Paguar:</span><span style="color:#16a34a;font-weight:700">${formatCurrency(paidTotal)}</span></div>
+  <div class="total-row"><span>Pa paguar:</span><span style="color:#dc2626;font-weight:700">${formatCurrency(unpaidTotal)}</span></div>
+  <div class="total-row grand"><span>TOTALI</span><span>${formatCurrency(grandTotal)}</span></div>
+</div>` : ''}
+
+<div class="footer">
+  <p>${COMPANY.footerMessage} ${COMPANY.name}!</p>
+  <p style="font-size:11px;margin-top:4px">${COMPANY.address} | Tel: ${COMPANY.phone}</p>
+</div>
+</body></html>`)
+  pw.document.close()
+  pw.print()
+}

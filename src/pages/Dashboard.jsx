@@ -6,6 +6,7 @@ import { Modal } from '../components/Modal'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
 import { Loading } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
+import { ClientLink, VehicleLink } from '../components/EntityLink'
 import { useOrders, useExpenses, useSalaries } from '../hooks/useData'
 import { formatCurrency, formatDate, calculateOrderTotal } from '../utils/helpers'
 import { printDailyReport } from '../utils/printOrder'
@@ -265,8 +266,8 @@ export const Dashboard = () => {
                 {paginatedOrders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell><span className="font-mono font-semibold text-dark-500">#{order.id}</span></TableCell>
-                    <TableCell><span className="font-medium">{order.clients?.full_name || 'N/A'}</span></TableCell>
-                    <TableCell><span className="text-gray-600">{order.cars?.make} {order.cars?.model}</span></TableCell>
+                    <TableCell><ClientLink id={order.client_id} name={order.clients?.full_name} className="font-medium" /></TableCell>
+                    <TableCell><VehicleLink id={order.car_id} car={order.cars} showPlate={false} className="text-gray-600" /></TableCell>
                     {showFinancials && <TableCell><span className="font-semibold text-dark-500">{formatCurrency(calculateOrderTotal(order))}</span></TableCell>}
                     <TableCell><Badge variant={order.is_paid ? 'success' : 'danger'}>{order.is_paid ? 'Paguar' : 'Pa paguar'}</Badge></TableCell>
                     <TableCell><span className="text-gray-600">{formatDate(order.created_at)}</span></TableCell>

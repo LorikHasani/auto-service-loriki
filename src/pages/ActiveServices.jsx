@@ -6,6 +6,7 @@ import { Modal } from '../components/Modal'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { SearchableSelect } from '../components/SearchableSelect'
+import { ClientLink, VehicleLink } from '../components/EntityLink'
 import { useOrders, useClients, useCars, useServices, useEmployees } from '../hooks/useData'
 import { Loading } from '../components/Loading'
 import { formatCurrency, calculateOrderTotal, formatDate } from '../utils/helpers'
@@ -118,14 +119,14 @@ const LiftStation = ({ idx, order, startTime, onAdd, onDone }) => {
           <div className="bg-dark-500 text-white px-4 py-2.5 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Car className="w-4 h-4 text-primary-400" />
-              <span className="text-sm font-semibold">{order.cars?.make} {order.cars?.model}</span>
+              <VehicleLink id={order.car_id} car={order.cars} showPlate={false} className="text-sm font-semibold" />
             </div>
             <span className="text-xs text-gray-400 font-mono">{order.cars?.license_plate}</span>
           </div>
           <div className="px-4 py-3 space-y-2">
             <div className="flex items-center gap-2 text-sm">
               <User className="w-3.5 h-3.5 text-gray-400" />
-              <span className="font-medium">{order.clients?.full_name}</span>
+              <ClientLink id={order.client_id} name={order.clients?.full_name} className="font-medium" />
             </div>
             <div className="flex items-start gap-2 text-sm">
               <Wrench className="w-3.5 h-3.5 text-gray-400 mt-0.5" />

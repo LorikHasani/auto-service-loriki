@@ -7,6 +7,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Clients } from './pages/Clients'
 import { ClientDetail } from './pages/ClientDetail'
 import { Vehicles } from './pages/Vehicles'
+import { VehicleDetail } from './pages/VehicleDetail'
 import { Services } from './pages/Services'
 import { Orders } from './pages/Orders'
 import { Archive } from './pages/Archive'
@@ -69,6 +70,7 @@ function AppRoutes() {
       <Route path="/clients" element={<P><Clients /></P>} />
       <Route path="/clients/:id" element={<P><ClientDetail /></P>} />
       <Route path="/vehicles" element={<P><Vehicles /></P>} />
+      <Route path="/vehicles/:id" element={<P><VehicleDetail /></P>} />
       <Route path="/services" element={<P><Services /></P>} />
       <Route path="/employees" element={<P><Employees /></P>} />
       <Route path="/employees/:id" element={<P><PasswordGate><EmployeeDetail /></PasswordGate></P>} />
