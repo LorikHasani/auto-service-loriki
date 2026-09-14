@@ -84,18 +84,13 @@ function companyHeader(COMPANY) {
     '<div class="company-info">' + COMPANY.address + '<br/>Tel: ' + COMPANY.phone + '</div></div>'
 }
 
-export const printOrderDocument = async (order, { showPrices = true, showOrderNo = true } = {}) => {
-  const COMPANY = await getCompany()
+function buildOrderPage(order, COMPANY, { showPrices, showOrderNo }) {
   const items = order.order_items || []
   const total = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
   const productRows = buildProductRows(items, showPrices)
   const todayStr = formatDate(new Date())
 
-  const pw = window.open('', '', 'height=700,width=800')
-  pw.document.write(`<html><head><title>${showOrderNo ? 'Porosi #' + order.id : 'Raport Sh\u00EBrbimi'}</title>
-<style>${PRINT_STYLES}</style></head><body>
-
-<div class="header">
+  return `<div class="header">
   ${companyHeader(COMPANY)}
   <div class="invoice-title">
     ${showOrderNo ? '<h2>POROSI</h2><p>#' + order.id + '</p>' : '<h2>RAPORT SH\u00CBRBIMI</h2>'}
@@ -140,7 +135,32 @@ ${showPrices ? `
 <div class="footer">
   <p>${COMPANY.footerMessage} ${COMPANY.name}!</p>
   <p style="font-size:11px;margin-top:4px">${COMPANY.address} | Tel: ${COMPANY.phone}</p>
-</div>
+</div>`
+}
+
+export const printOrderDocument = async (order, { showPrices = true, showOrderNo = true } = {}) => {
+  const COMPANY = await getCompany()
+  const pw = window.open('', '', 'height=700,width=800')
+  pw.document.write(`<html><head><title>${showOrderNo ? 'Porosi #' + order.id : 'Raport Shërbimi'}</title>
+<style>${PRINT_STYLES}</style></head><body>
+${buildOrderPage(order, COMPANY, { showPrices, showOrderNo })}
+</body></html>`)
+  pw.document.close()
+  pw.print()
+}
+
+// Prints one full "Raport Shërbimi" per order, each on its own page, in a single print job.
+export const printOrderReports = async (orders, { showPrices = true, showOrderNo = true, title = 'Raportet e Shërbimeve' } = {}) => {
+  const COMPANY = await getCompany()
+  const sorted = [...orders].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+  const pages = sorted.map((order, idx) =>
+    '<div' + (idx > 0 ? ' class="page-break"' : '') + '>' + buildOrderPage(order, COMPANY, { showPrices, showOrderNo }) + '</div>'
+  ).join('\n')
+
+  const pw = window.open('', '', 'height=700,width=800')
+  pw.document.write(`<html><head><title>${title}</title>
+<style>${PRINT_STYLES}</style></head><body>
+${pages}
 </body></html>`)
   pw.document.close()
   pw.print()

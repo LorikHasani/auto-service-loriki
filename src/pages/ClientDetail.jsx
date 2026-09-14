@@ -10,7 +10,7 @@ import { Pagination, paginate, usePagination } from '../components/Pagination'
 import { VehicleLink } from '../components/EntityLink'
 import { OrderDetailContent } from '../components/OrderDetail'
 import { formatCurrency, calculateOrderTotal, formatDate, formatDurationShort } from '../utils/helpers'
-import { printOrderDocument, printServiceHistory } from '../utils/printOrder'
+import { printOrderDocument, printServiceHistory, printOrderReports } from '../utils/printOrder'
 import { supabase } from '../services/supabase'
 
 export const ClientDetail = () => {
@@ -32,6 +32,8 @@ export const ClientDetail = () => {
   const [detailOrder, setDetailOrder] = useState(null)
   const [isHistoryPrintOpen, setIsHistoryPrintOpen] = useState(false)
   const [historyShowPrices, setHistoryShowPrices] = useState(true)
+  const [historyMode, setHistoryMode] = useState('combined')
+  const [historyShowOrderNo, setHistoryShowOrderNo] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -88,7 +90,11 @@ export const ClientDetail = () => {
 
   const executeHistoryPrint = () => {
     const car = selectedCarId !== 'all' ? clientCars.find(c => String(c.id) === String(selectedCarId)) : null
-    printServiceHistory(filteredOrders, { client, car, showPrices: historyShowPrices })
+    if (historyMode === 'separate') {
+      printOrderReports(filteredOrders, { showPrices: historyShowPrices, showOrderNo: historyShowOrderNo, title: 'Raportet e Shërbimeve - ' + client.full_name })
+    } else {
+      printServiceHistory(filteredOrders, { client, car, showPrices: historyShowPrices })
+    }
     setIsHistoryPrintOpen(false)
   }
 
@@ -284,11 +290,30 @@ export const ClientDetail = () => {
             <p><strong>Automjeti:</strong> {selectedCar ? selectedCar.make + ' ' + selectedCar.model + ' (' + selectedCar.license_plate + ')' : 'Të gjitha'}</p>
             <p><strong>Servisime:</strong> {filteredOrders.length}</p>
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: 'combined', label: 'Të gjitha bashkë', desc: 'Një listë me të gjitha servisimet' },
+              { value: 'separate', label: 'Raport për secilin', desc: 'Raport shërbimi i veçantë për çdo servisim' },
+            ].map(opt => (
+              <button key={opt.value} type="button" onClick={() => setHistoryMode(opt.value)}
+                className={`p-3 rounded-lg border text-left transition-colors ${historyMode === opt.value ? 'border-primary-400 bg-primary-50 ring-2 ring-primary-100' : 'border-gray-200 hover:bg-gray-50'}`}>
+                <span className="font-medium text-sm block">{opt.label}</span>
+                <span className="text-xs text-gray-500">{opt.desc}</span>
+              </button>
+            ))}
+          </div>
           <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
             <input type="checkbox" checked={historyShowPrices} onChange={(e) => setHistoryShowPrices(e.target.checked)}
               className="w-4 h-4 rounded border-gray-300 text-primary-400 focus:ring-primary-400" />
-            <div><span className="font-medium text-sm">Shfaq çmimet</span><p className="text-xs text-gray-500">Totali për secilin servisim dhe shuma totale</p></div>
+            <div><span className="font-medium text-sm">Shfaq çmimet</span><p className="text-xs text-gray-500">{historyMode === 'separate' ? 'Çmimi, sasia dhe totali në çdo raport' : 'Totali për secilin servisim dhe shuma totale'}</p></div>
           </label>
+          {historyMode === 'separate' && (
+            <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+              <input type="checkbox" checked={historyShowOrderNo} onChange={(e) => setHistoryShowOrderNo(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-primary-400 focus:ring-primary-400" />
+              <div><span className="font-medium text-sm">Shfaq numrin e porosisë</span><p className="text-xs text-gray-500">Pa këtë, titulli është "Raport Shërbimi"</p></div>
+            </label>
+          )}
           <div className="flex gap-3 justify-end pt-3 border-t">
             <Button variant="outline" onClick={() => setIsHistoryPrintOpen(false)}>Anulo</Button>
             <Button onClick={executeHistoryPrint} className="flex items-center gap-2"><Printer className="w-4 h-4" /> Printo</Button>
