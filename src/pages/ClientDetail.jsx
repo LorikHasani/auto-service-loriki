@@ -1,13 +1,13 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Car, Phone, Mail, MapPin, Printer, Calendar, Eye, Wrench, FileText, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Car, Phone, Mail, MapPin, Printer, Calendar, Eye, Wrench, FileText, Edit2, X, Gauge } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Modal } from '../components/Modal'
+import { Input } from '../components/Input'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
 import { Loading, EmptyState } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
-import { VehicleLink } from '../components/EntityLink'
 import { OrderDetailContent } from '../components/OrderDetail'
 import { formatCurrency, calculateOrderTotal, formatDate, formatDurationShort } from '../utils/helpers'
 import { printOrderDocument, printServiceHistory, printOrderReports } from '../utils/printOrder'
@@ -34,6 +34,15 @@ export const ClientDetail = () => {
   const [historyShowPrices, setHistoryShowPrices] = useState(true)
   const [historyMode, setHistoryMode] = useState('combined')
   const [historyShowOrderNo, setHistoryShowOrderNo] = useState(false)
+
+  // Edit client / vehicle state
+  const [isClientEditOpen, setIsClientEditOpen] = useState(false)
+  const [clientForm, setClientForm] = useState({ full_name: '', phone: '', email: '', address: '' })
+  const [isCarEditOpen, setIsCarEditOpen] = useState(false)
+  const [carForm, setCarForm] = useState({ make: '', model: '', year: '', color: '', license_plate: '', vin: '' })
+  const [formError, setFormError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const vehiclePanelRef = useRef(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -100,10 +109,69 @@ export const ClientDetail = () => {
 
   const handleNewService = (car) => navigate('/orders', { state: { prefillCar: car } })
 
+  // Show the vehicle's details in the panel above instead of navigating away
+  const selectCar = (carId) => {
+    setSelectedCarId(String(carId))
+    requestAnimationFrame(() => vehiclePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
+
+  const openClientEdit = () => {
+    setClientForm({ full_name: client.full_name || '', phone: client.phone || '', email: client.email || '', address: client.address || '' })
+    setIsClientEditOpen(true)
+  }
+
+  const handleClientSave = async (e) => {
+    e.preventDefault(); setSubmitting(true)
+    try {
+      const { data, error } = await supabase.from('clients').update(clientForm).eq('id', client.id).select().single()
+      if (error) throw error
+      setClient(data)
+      // Keep the client info shown in order rows / prints in sync
+      setOrders(prev => prev.map(o => ({ ...o, clients: { ...o.clients, full_name: data.full_name, phone: data.phone, email: data.email } })))
+      setIsClientEditOpen(false)
+    } catch (error) { alert('Gabim: ' + error.message) }
+    finally { setSubmitting(false) }
+  }
+
+  const openCarEdit = (car) => {
+    setCarForm({ make: car.make || '', model: car.model || '', year: car.year || '', color: car.color || '', license_plate: car.license_plate || '', vin: car.vin || '' })
+    setFormError('')
+    setIsCarEditOpen(true)
+  }
+
+  const handleCarSave = async (e) => {
+    e.preventDefault(); setSubmitting(true); setFormError('')
+    try {
+      const car = clientCars.find(c => String(c.id) === String(selectedCarId))
+      const plate = carForm.license_plate.trim().toUpperCase()
+      const vin = carForm.vin?.trim().toUpperCase() || ''
+
+      const { data: dupPlate, error: dupErr } = await supabase.from('cars').select('id, make, model').eq('license_plate', plate).neq('id', car.id).limit(1)
+      if (dupErr) throw dupErr
+      if (dupPlate?.length) { setFormError('Kjo targë ekziston tashmë: ' + dupPlate[0].make + ' ' + dupPlate[0].model); return }
+      if (vin) {
+        const { data: dupVin, error: vinErr } = await supabase.from('cars').select('id, make, model').eq('vin', vin).neq('id', car.id).limit(1)
+        if (vinErr) throw vinErr
+        if (dupVin?.length) { setFormError('Ky VIN ekziston tashmë: ' + dupVin[0].make + ' ' + dupVin[0].model); return }
+      }
+
+      const payload = { ...carForm, license_plate: plate, vin: vin || null }
+      const { data, error } = await supabase.from('cars').update(payload).eq('id', car.id).select().single()
+      if (error) throw error
+      setClientCars(prev => prev.map(c => c.id === data.id ? data : c))
+      setOrders(prev => prev.map(o => o.car_id === data.id ? { ...o, cars: { ...o.cars, make: data.make, model: data.model, license_plate: data.license_plate, vin: data.vin } } : o))
+      setIsCarEditOpen(false)
+    } catch (error) { alert('Gabim: ' + error.message) }
+    finally { setSubmitting(false) }
+  }
+
   if (loading) return <Loading />
   if (!client) return null
 
   const selectedCar = selectedCarId !== 'all' ? clientCars.find(c => String(c.id) === String(selectedCarId)) : null
+  const kmValues = filteredOrders.filter(o => o.km).map(o => Number(o.km))
+  const selectedCarLastKm = selectedCar && kmValues.length > 0 ? Math.max(...kmValues) : null
+  const selectedCarLastService = selectedCar && filteredOrders.length > 0 ? filteredOrders[0].created_at : null
 
   return (
     <div className="space-y-6">
@@ -124,7 +192,10 @@ export const ClientDetail = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-1">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Informacioni i Klientit</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Informacioni i Klientit</h3>
+            <Button size="sm" variant="outline" onClick={openClientEdit} className="flex items-center gap-1.5"><Edit2 className="w-3.5 h-3.5" /> Ndrysho</Button>
+          </div>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center"><Phone className="w-4 h-4 text-primary-500" /></div>
@@ -154,6 +225,7 @@ export const ClientDetail = () => {
 
       {clientCars.length > 0 && (
         <Card>
+          <div ref={vehiclePanelRef} className="scroll-mt-4" />
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Automjetet e Klientit</h3>
           <div className="flex flex-wrap gap-2">
             <button onClick={() => setSelectedCarId('all')}
@@ -165,7 +237,7 @@ export const ClientDetail = () => {
               const active = String(selectedCarId) === String(car.id)
               return (
                 <div key={car.id} className={`flex items-stretch rounded-lg overflow-hidden transition-all ${active ? 'bg-primary-400 text-white shadow-md' : 'bg-gray-100 text-gray-600'}`}>
-                  <button onClick={() => setSelectedCarId(String(car.id))}
+                  <button onClick={() => selectCar(car.id)}
                     className={`px-4 py-2.5 text-sm font-medium flex items-center gap-2 transition-colors ${active ? '' : 'hover:bg-gray-200'}`}>
                     <Car className="w-4 h-4" /> {car.make} {car.model} <span className="text-xs opacity-75">({car.license_plate})</span>
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${active ? 'bg-white/20' : 'bg-gray-200'}`}>{cnt}</span>
@@ -174,25 +246,33 @@ export const ClientDetail = () => {
                     className={`px-2.5 flex items-center border-l transition-colors ${active ? 'border-white/25 hover:bg-primary-500' : 'border-gray-200 hover:bg-gray-200'}`}>
                     <Wrench className="w-4 h-4" />
                   </button>
-                  <button onClick={() => navigate('/vehicles/' + car.id)} title="Shiko automjetin"
-                    className={`px-2.5 flex items-center border-l transition-colors ${active ? 'border-white/25 hover:bg-primary-500' : 'border-gray-200 hover:bg-gray-200'}`}>
-                    <ExternalLink className="w-4 h-4" />
-                  </button>
                 </div>
               )
             })}
           </div>
           {selectedCar && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div><span className="text-gray-500 text-xs">Marka / Modeli</span><p className="font-medium">{selectedCar.make} {selectedCar.model}</p></div>
-                <div><span className="text-gray-500 text-xs">Viti</span><p className="font-medium">{selectedCar.year}</p></div>
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center"><Car className="w-5 h-5 text-primary-500" /></div>
+                  <div>
+                    <p className="text-lg font-display text-dark-500">{selectedCar.make} {selectedCar.model}</p>
+                    <p className="text-sm text-gray-500 font-mono">{selectedCar.license_plate}</p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedCarId('all')} title="Mbyll" className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
+                <div><span className="text-gray-500 text-xs">Viti</span><p className="font-medium">{selectedCar.year || '—'}</p></div>
+                <div><span className="text-gray-500 text-xs">Ngjyra</span><p className="font-medium">{selectedCar.color || '—'}</p></div>
                 <div><span className="text-gray-500 text-xs">Targa</span><p className="font-mono font-medium">{selectedCar.license_plate}</p></div>
-                <div><span className="text-gray-500 text-xs">VIN</span><p className="font-mono font-medium text-xs">{selectedCar.vin || 'N/A'}</p></div>
+                <div><span className="text-gray-500 text-xs">VIN</span><p className="font-mono font-medium text-xs break-all">{selectedCar.vin || 'N/A'}</p></div>
+                <div><span className="text-gray-500 text-xs">Km e fundit</span><p className="font-medium flex items-center gap-1"><Gauge className="w-3.5 h-3.5 text-gray-400" />{selectedCarLastKm ? selectedCarLastKm.toLocaleString() + ' km' : '—'}</p></div>
+                <div><span className="text-gray-500 text-xs">Servisimi i fundit</span><p className="font-medium">{selectedCarLastService ? formatDate(selectedCarLastService) : '—'}</p></div>
               </div>
               <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-200">
                 <Button size="sm" onClick={() => handleNewService(selectedCar)} className="flex items-center gap-2"><Wrench className="w-4 h-4" /> Shto Servisim</Button>
-                <Button size="sm" variant="outline" onClick={() => navigate('/vehicles/' + selectedCar.id)} className="flex items-center gap-2"><ExternalLink className="w-4 h-4" /> Shiko Automjetin</Button>
+                <Button size="sm" variant="outline" onClick={() => openCarEdit(selectedCar)} className="flex items-center gap-2"><Edit2 className="w-4 h-4" /> Ndrysho Automjetin</Button>
               </div>
             </div>
           )}
@@ -227,7 +307,13 @@ export const ClientDetail = () => {
                 {paginatedOrders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell><span className="font-mono font-semibold">#{order.id}</span></TableCell>
-                    <TableCell><VehicleLink id={order.car_id} car={order.cars} className="text-sm" /></TableCell>
+                    <TableCell>
+                      <button onClick={() => order.car_id && selectCar(order.car_id)} title="Shiko automjetin"
+                        className="text-left text-sm hover:text-primary-500 hover:underline transition-colors">
+                        {[order.cars?.make, order.cars?.model].filter(Boolean).join(' ') || 'N/A'}
+                        {order.cars?.license_plate && <span className="block text-xs text-gray-400 font-mono">{order.cars.license_plate}</span>}
+                      </button>
+                    </TableCell>
                     <TableCell><span className="text-sm">{order.km ? Number(order.km).toLocaleString() + ' km' : '\u2014'}</span></TableCell>
                     <TableCell><div className="text-sm text-gray-600">{order.order_items?.map((item, idx) => <div key={idx}>• {item.service_name}</div>)}</div></TableCell>
                     <TableCell><span className="font-semibold">{formatCurrency(calculateOrderTotal(order))}</span></TableCell>
@@ -319,6 +405,41 @@ export const ClientDetail = () => {
             <Button onClick={executeHistoryPrint} className="flex items-center gap-2"><Printer className="w-4 h-4" /> Printo</Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Edit Client Modal */}
+      <Modal isOpen={isClientEditOpen} onClose={() => setIsClientEditOpen(false)} title="Ndrysho Klientin">
+        <form onSubmit={handleClientSave} className="space-y-4">
+          <Input label="Emri i Plotë" value={clientForm.full_name} onChange={(e) => setClientForm({ ...clientForm, full_name: e.target.value })} required />
+          <Input label="Telefoni" type="tel" value={clientForm.phone} onChange={(e) => setClientForm({ ...clientForm, phone: e.target.value })} required />
+          <Input label="Email" type="email" value={clientForm.email} onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })} />
+          <Input label="Adresa" value={clientForm.address} onChange={(e) => setClientForm({ ...clientForm, address: e.target.value })} />
+          <div className="flex gap-3 justify-end pt-4">
+            <Button type="button" variant="outline" onClick={() => setIsClientEditOpen(false)}>Anulo</Button>
+            <Button type="submit" disabled={submitting}>{submitting ? 'Duke ruajtur...' : 'Përditëso'}</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Vehicle Modal */}
+      <Modal isOpen={isCarEditOpen} onClose={() => setIsCarEditOpen(false)} title="Ndrysho Automjetin">
+        <form onSubmit={handleCarSave} className="space-y-4">
+          {formError && <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">{formError}</div>}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input label="Marka" value={carForm.make} onChange={(e) => setCarForm({ ...carForm, make: e.target.value })} required />
+            <Input label="Modeli" value={carForm.model} onChange={(e) => setCarForm({ ...carForm, model: e.target.value })} required />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input label="Viti" type="number" value={carForm.year} onChange={(e) => setCarForm({ ...carForm, year: e.target.value })} required />
+            <Input label="Ngjyra" value={carForm.color} onChange={(e) => setCarForm({ ...carForm, color: e.target.value })} />
+          </div>
+          <Input label="Targa" value={carForm.license_plate} onChange={(e) => setCarForm({ ...carForm, license_plate: e.target.value })} required />
+          <Input label="VIN" value={carForm.vin} onChange={(e) => setCarForm({ ...carForm, vin: e.target.value })} />
+          <div className="flex gap-3 justify-end pt-4">
+            <Button type="button" variant="outline" onClick={() => setIsCarEditOpen(false)}>Anulo</Button>
+            <Button type="submit" disabled={submitting}>{submitting ? 'Duke ruajtur...' : 'Përditëso'}</Button>
+          </div>
+        </form>
       </Modal>
 
       {/* Detail Modal */}

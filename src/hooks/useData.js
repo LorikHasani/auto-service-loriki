@@ -1,6 +1,19 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../services/supabase'
 
+// Supabase returns at most 1000 rows per request, so page through with range()
+// until a short page comes back. buildQuery must return a fresh, ordered query.
+const PAGE_SIZE = 1000
+export const fetchAll = async (buildQuery) => {
+  const rows = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1)
+    if (error) throw error
+    rows.push(...(data || []))
+    if (!data || data.length < PAGE_SIZE) return rows
+  }
+}
+
 export const useClients = () => {
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
@@ -9,9 +22,8 @@ export const useClients = () => {
   const fetchClients = useCallback(async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.from('clients').select('*').order('full_name')
-      if (error) throw error
-      setClients(data || [])
+      const data = await fetchAll(() => supabase.from('clients').select('*').order('full_name').order('id'))
+      setClients(data)
     } catch (err) { setError(err.message) }
     finally { setLoading(false) }
   }, [])
@@ -28,9 +40,8 @@ export const useCars = () => {
   const fetchCars = useCallback(async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.from('cars').select('*, clients(full_name, phone)').order('created_at', { ascending: false })
-      if (error) throw error
-      setCars(data || [])
+      const data = await fetchAll(() => supabase.from('cars').select('*, clients(full_name, phone)').order('created_at', { ascending: false }).order('id', { ascending: false }))
+      setCars(data)
     } catch (err) { setError(err.message) }
     finally { setLoading(false) }
   }, [])
@@ -48,14 +59,13 @@ export const useOrders = (includeArchived = false) => {
     try {
       setLoading(true)
       // Always fetch ALL orders - filter client-side for reliability (NULL is_archived safe)
-      const { data, error } = await supabase
+      const data = await fetchAll(() => supabase
         .from('orders')
         .select(`*, clients(full_name, phone, email), cars(make, model, license_plate, vin), order_items(*)`)
         .order('created_at', { ascending: false })
+        .order('id', { ascending: false }))
 
-      if (error) throw error
-
-      let result = data || []
+      let result = data
       if (!includeArchived) {
         // Client-side filter: exclude only where is_archived === true
         // This correctly keeps NULL and false records
@@ -82,9 +92,8 @@ export const useLogs = () => {
   const fetchLogs = useCallback(async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.from('daily_logs').select('*').order('log_date', { ascending: false })
-      if (error) throw error
-      setLogs(data || [])
+      const data = await fetchAll(() => supabase.from('daily_logs').select('*').order('log_date', { ascending: false }).order('id', { ascending: false }))
+      setLogs(data)
     } catch (err) { setError(err.message) }
     finally { setLoading(false) }
   }, [])
@@ -139,9 +148,8 @@ export const useExpenses = () => {
   const fetchExpenses = useCallback(async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.from('daily_expenses').select('*').order('expense_date', { ascending: false }).order('created_at', { ascending: false })
-      if (error) throw error
-      setExpenses(data || [])
+      const data = await fetchAll(() => supabase.from('daily_expenses').select('*').order('expense_date', { ascending: false }).order('created_at', { ascending: false }).order('id', { ascending: false }))
+      setExpenses(data)
     } catch (err) { setError(err.message) }
     finally { setLoading(false) }
   }, [])
@@ -158,9 +166,8 @@ export const useSalaries = () => {
   const fetchSalaries = useCallback(async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.from('salary_payments').select('*, employees(name)').order('payment_date', { ascending: false }).order('created_at', { ascending: false })
-      if (error) throw error
-      setSalaries(data || [])
+      const data = await fetchAll(() => supabase.from('salary_payments').select('*, employees(name)').order('payment_date', { ascending: false }).order('created_at', { ascending: false }).order('id', { ascending: false }))
+      setSalaries(data)
     } catch (err) { setError(err.message) }
     finally { setLoading(false) }
   }, [])
@@ -177,13 +184,13 @@ export const useAppointments = () => {
   const fetchAppointments = useCallback(async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
+      const data = await fetchAll(() => supabase
         .from('appointments')
         .select('*, clients(full_name, phone), cars(make, model, license_plate)')
         .order('appointment_date', { ascending: true })
         .order('appointment_time', { ascending: true, nullsFirst: true })
-      if (error) throw error
-      setAppointments(data || [])
+        .order('id', { ascending: true }))
+      setAppointments(data)
     } catch (err) { setError(err.message) }
     finally { setLoading(false) }
   }, [])
@@ -203,12 +210,12 @@ export const autoArchiveOldOrders = async () => {
   try {
     const today = getLocalDate(new Date())
 
-    // Fetch ALL orders (no server-side filter - avoids NULL issues)
-    const { data: allOrders, error: fetchErr } = await supabase
+    // Fetch ALL orders (paged; no server-side filter - avoids NULL issues)
+    const allOrders = await fetchAll(() => supabase
       .from('orders')
       .select('id, created_at, is_archived')
-    if (fetchErr) throw fetchErr
-    if (!allOrders || allOrders.length === 0) return 0
+      .order('id'))
+    if (allOrders.length === 0) return 0
 
     // Find non-archived orders from previous days
     const idsToArchive = allOrders
@@ -217,11 +224,15 @@ export const autoArchiveOldOrders = async () => {
 
     if (idsToArchive.length === 0) return 0
 
-    const { error: updateErr } = await supabase
-      .from('orders')
-      .update({ is_archived: true, archived_at: new Date().toISOString() })
-      .in('id', idsToArchive)
-    if (updateErr) throw updateErr
+    // Update in chunks so the id list doesn't make the request URL too long
+    const archivedAt = new Date().toISOString()
+    for (let i = 0; i < idsToArchive.length; i += 200) {
+      const { error: updateErr } = await supabase
+        .from('orders')
+        .update({ is_archived: true, archived_at: archivedAt })
+        .in('id', idsToArchive.slice(i, i + 200))
+      if (updateErr) throw updateErr
+    }
 
     console.log('Auto-archived', idsToArchive.length, 'orders')
     return idsToArchive.length
