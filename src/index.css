@@ -8,7 +8,13 @@
   * {
     @apply border-gray-200;
   }
-  
+
+  /* Base size for the whole app: Tailwind sizes are in rem, so 14.4px
+     (instead of the browser's 16px) scales text, spacing and buttons to 90% */
+  html {
+    font-size: 14.4px;
+  }
+
   body {
     @apply antialiased text-gray-900;
     font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
