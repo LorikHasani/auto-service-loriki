@@ -1,16 +1,18 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../services/supabase'
 
-// Supabase returns at most 1000 rows per request, so page through with range()
-// until a short page comes back. buildQuery must return a fresh, ordered query.
+// Supabase caps rows per request (1000 by default, possibly lower per project),
+// so page through with range() until an empty page comes back. Advancing by the
+// rows actually received keeps this correct whatever the server's cap is.
+// buildQuery must return a fresh, ordered query.
 const PAGE_SIZE = 1000
 export const fetchAll = async (buildQuery) => {
   const rows = []
-  for (let from = 0; ; from += PAGE_SIZE) {
-    const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1)
+  for (;;) {
+    const { data, error } = await buildQuery().range(rows.length, rows.length + PAGE_SIZE - 1)
     if (error) throw error
-    rows.push(...(data || []))
-    if (!data || data.length < PAGE_SIZE) return rows
+    if (!data || data.length === 0) return rows
+    rows.push(...data)
   }
 }
 
@@ -199,45 +201,22 @@ export const useAppointments = () => {
   return { appointments, loading, error, refetch: fetchAppointments }
 }
 
-// Helper: get local date string YYYY-MM-DD
-const getLocalDate = (ts) => {
-  const d = new Date(ts)
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
-}
-
-// Auto-archive old orders (runs from App.jsx on load)
+// Auto-archive old orders (runs from App.jsx on load).
+// Archives every non-archived order (false or NULL) created before local midnight
+// in a single filtered UPDATE, so no row limit applies. Throws on failure.
 export const autoArchiveOldOrders = async () => {
-  try {
-    const today = getLocalDate(new Date())
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
 
-    // Fetch ALL orders (paged; no server-side filter - avoids NULL issues)
-    const allOrders = await fetchAll(() => supabase
-      .from('orders')
-      .select('id, created_at, is_archived')
-      .order('id'))
-    if (allOrders.length === 0) return 0
+  const { data, error } = await supabase
+    .from('orders')
+    .update({ is_archived: true, archived_at: new Date().toISOString() })
+    .or('is_archived.is.null,is_archived.eq.false')
+    .lt('created_at', startOfToday.toISOString())
+    .select('id')
+  if (error) throw error
 
-    // Find non-archived orders from previous days
-    const idsToArchive = allOrders
-      .filter(o => o.is_archived !== true && getLocalDate(o.created_at) < today)
-      .map(o => o.id)
-
-    if (idsToArchive.length === 0) return 0
-
-    // Update in chunks so the id list doesn't make the request URL too long
-    const archivedAt = new Date().toISOString()
-    for (let i = 0; i < idsToArchive.length; i += 200) {
-      const { error: updateErr } = await supabase
-        .from('orders')
-        .update({ is_archived: true, archived_at: archivedAt })
-        .in('id', idsToArchive.slice(i, i + 200))
-      if (updateErr) throw updateErr
-    }
-
-    console.log('Auto-archived', idsToArchive.length, 'orders')
-    return idsToArchive.length
-  } catch (err) {
-    console.error('Auto-archive failed:', err)
-    return 0
-  }
+  const count = data?.length || 0
+  if (count > 0) console.log('Auto-archived', count, 'orders')
+  return count
 }

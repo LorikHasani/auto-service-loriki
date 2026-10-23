@@ -20,7 +20,7 @@ const getLocalDate = (ts) => {
 }
 
 export const Archive = () => {
-  const { orders, loading, refetch } = useOrders(true)
+  const { orders, loading, error, refetch } = useOrders(true)
   const { clients } = useClients()
   const { cars } = useCars()
   const { services } = useServices()
@@ -180,6 +180,12 @@ export const Archive = () => {
   }
 
   if (loading) return <Loading />
+  if (error) return (
+    <Card>
+      <EmptyState title="Gabim duke ngarkuar arkivën" description={error}
+        action={<Button onClick={refetch} className="flex items-center gap-2"><RotateCcw className="w-4 h-4" /> Provo përsëri</Button>} />
+    </Card>
+  )
 
   return (
     <div className="space-y-6">

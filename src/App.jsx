@@ -37,14 +37,18 @@ const AppLayout = ({ children }) => {
     archiveRan.current = true
 
     // Check if we already archived today (avoid loop on reload)
-    const today = new Date().toISOString().split('T')[0]
+    const now = new Date()
+    const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
     const lastArchive = sessionStorage.getItem('lastAutoArchive')
     if (lastArchive === today) return
 
-    autoArchiveOldOrders().then((count) => {
-      sessionStorage.setItem('lastAutoArchive', today)
-      if (count > 0) window.location.reload()
-    })
+    // Only remember success, so a failed run is retried on the next load
+    autoArchiveOldOrders()
+      .then((count) => {
+        sessionStorage.setItem('lastAutoArchive', today)
+        if (count > 0) window.location.reload()
+      })
+      .catch((err) => console.error('Auto-archive failed:', err))
   }, [])
 
   return (
