@@ -20,7 +20,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 animate-fade-in">
       <div className="absolute inset-0 bg-dark-500/60 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative bg-white w-full ${sizes[size]} max-h-[95vh] sm:max-h-[90vh] overflow-y-auto animate-scale-in border border-gray-200 rounded-t-2xl sm:rounded-xl shadow-xl`}>
+      <div className={`relative bg-white w-full ${sizes[size]} max-h-[calc(95vh/var(--app-zoom))] sm:max-h-[calc(90vh/var(--app-zoom))] overflow-y-auto animate-scale-in border border-gray-200 rounded-t-2xl sm:rounded-xl shadow-xl`}>
         <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-4 flex items-center justify-between rounded-t-2xl sm:rounded-t-xl z-10">
           <h2 className="text-base sm:text-lg font-bold text-dark-500">{title}</h2>
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600">

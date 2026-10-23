@@ -9,10 +9,17 @@
     @apply border-gray-200;
   }
 
-  /* Base size for the whole app: Tailwind sizes are in rem, so 14.4px
-     (instead of the browser's 16px) scales text, spacing and buttons to 90% */
-  html {
-    font-size: 14.4px;
+  /* Render the app at 90% on desktop, the same as Chrome zoom at 90%.
+     Inside a zoomed page, vh units shrink with the zoom too, so screen-height
+     sizes divide by --app-zoom to still fill the window. */
+  :root {
+    --app-zoom: 1;
+  }
+  @media (min-width: 1024px) {
+    :root {
+      --app-zoom: 0.9;
+      zoom: 0.9;
+    }
   }
 
   body {
@@ -26,6 +33,13 @@
 }
 
 @layer utilities {
+  .min-h-screen {
+    min-height: calc(100vh / var(--app-zoom));
+  }
+  .h-screen {
+    height: calc(100vh / var(--app-zoom));
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;

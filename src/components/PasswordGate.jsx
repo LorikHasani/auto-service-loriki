@@ -32,7 +32,7 @@ export const PasswordGate = ({ children }) => {
   if (unlocked) return children
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="flex items-center justify-center min-h-[calc(60vh/var(--app-zoom))]">
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 w-full max-w-xs text-center space-y-5">
         <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mx-auto">
           <Lock className="w-7 h-7 text-gray-400" />
