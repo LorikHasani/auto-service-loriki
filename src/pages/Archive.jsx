@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Printer, RotateCcw, Search, Calendar, X, Edit2, CheckCircle, XCircle, Plus, Trash2, Eye, EyeOff } from 'lucide-react'
+import { Printer, RotateCcw, Search, Calendar, X, Edit2, CheckCircle, XCircle, Plus, Trash2, Eye, EyeOff, AlertTriangle, Archive as ArchiveIcon } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
@@ -9,7 +9,7 @@ import { ClientLink, VehicleLink } from '../components/EntityLink'
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell, Badge } from '../components/Table'
 import { Loading, EmptyState } from '../components/Loading'
 import { Pagination, paginate, usePagination } from '../components/Pagination'
-import { useOrders, useClients, useCars, useServices, useEmployees } from '../hooks/useData'
+import { useOrders, useClients, useCars, useServices, useEmployees, autoArchiveOldOrders } from '../hooks/useData'
 import { formatCurrency, calculateOrderTotal, formatDate, formatDurationShort } from '../utils/helpers'
 import { printOrderDocument } from '../utils/printOrder'
 import { supabase } from '../services/supabase'
@@ -71,6 +71,27 @@ export const Archive = () => {
   }, [orders, searchQuery, dateFrom, dateTo, paymentFilter])
 
   useEffect(() => { setPage(1) }, [searchQuery, dateFrom, dateTo, paymentFilter])
+
+  // Orders from previous days that never got archived (auto-archive failed or was skipped)
+  const pendingArchive = useMemo(() => {
+    const today = getLocalDate(new Date())
+    return orders.filter(o => o.is_archived !== true && getLocalDate(o.created_at) < today)
+  }, [orders])
+  const [archivingOld, setArchivingOld] = useState(false)
+  const [archiveResult, setArchiveResult] = useState(null)
+
+  const archiveOldNow = async () => {
+    setArchivingOld(true); setArchiveResult(null)
+    try {
+      const count = await autoArchiveOldOrders()
+      setArchiveResult(count > 0
+        ? { ok: true, text: 'U arkivuan ' + count + ' servisime.' }
+        : { ok: false, text: 'Databaza nuk arkivoi asnjë servisim (0 rreshta u ndryshuan). Ka mundësi që leja (RLS policy) për UPDATE në tabelën orders po e bllokon.' })
+      refetch()
+    } catch (err) {
+      setArchiveResult({ ok: false, text: 'Gabim nga databaza: ' + (err.message || String(err)) + (err.code ? ' (kodi ' + err.code + ')' : '') })
+    } finally { setArchivingOld(false) }
+  }
 
   const { totalPages } = usePagination(archivedOrders)
   const paginatedOrders = paginate(archivedOrders, page)
@@ -193,6 +214,28 @@ export const Archive = () => {
         <h1 className="text-2xl sm:text-4xl font-display text-dark-500 mb-2">Arkiva</h1>
         <p className="text-gray-600">Shiko dhe menaxho servisimet e arkivuara</p>
       </div>
+
+      {(pendingArchive.length > 0 || archiveResult) && (
+        <Card className="!p-4 border border-amber-200 bg-amber-50">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+            <div className="flex-1 text-sm">
+              {pendingArchive.length > 0 && (
+                <p className="text-amber-800">
+                  <strong>{pendingArchive.length}</strong> servisime nga ditët e kaluara nuk janë arkivuar ende
+                  (më i vjetri: {formatDate(pendingArchive[pendingArchive.length - 1].created_at)}, më i riu: {formatDate(pendingArchive[0].created_at)}).
+                </p>
+              )}
+              {archiveResult && <p className={'mt-1 ' + (archiveResult.ok ? 'text-green-700' : 'text-red-700 font-medium')}>{archiveResult.text}</p>}
+            </div>
+            {pendingArchive.length > 0 && (
+              <Button size="sm" onClick={archiveOldNow} disabled={archivingOld} className="flex items-center gap-2 shrink-0">
+                <ArchiveIcon className="w-4 h-4" /> {archivingOld ? 'Duke arkivuar...' : 'Arkivo tani'}
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
 
       <Card className="!p-4">
         <div className="flex flex-col lg:flex-row gap-3 items-end">
